@@ -86,6 +86,7 @@ class Story(models.Model):
 
     posted_at = models.DateTimeField(null=True, blank=True)
     skipped_at = models.DateTimeField(null=True, blank=True)
+    notified_at = models.DateTimeField(null=True, blank=True, help_text="Push notification sent.")
 
     class Meta:
         ordering = ["-published_at"]

@@ -116,6 +116,8 @@ GENERATE_REEL_SCRIPT = env_bool("GENERATE_REEL_SCRIPT", False)
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
 VAPID_CLAIMS_EMAIL = os.environ.get("VAPID_CLAIMS_EMAIL", "admin@example.com")
+# Push a notification for newly generated stories whose importance + shareability is at least this.
+PUSH_SCORE_THRESHOLD = int(os.environ.get("PUSH_SCORE_THRESHOLD", "18"))
 
 # Stories older than this are never ingested.
 FEED_MAX_AGE_HOURS = 72

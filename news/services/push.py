@@ -4,9 +4,11 @@ import json
 import logging
 
 from django.conf import settings
+from django.db.models import F
+from django.utils import timezone
 from pywebpush import WebPushException, webpush
 
-from news.models import PushSubscription
+from news.models import PushSubscription, Story, StoryStatus
 
 logger = logging.getLogger(__name__)
 
@@ -50,3 +52,43 @@ def notify(title: str, body: str = "", url: str = "/", tag: str = "") -> int:
         except Exception as exc:  # network etc. — a notification must never break the pipeline
             logger.warning("push error for %s: %s", sub, exc)
     return sent
+
+
+MAX_INDIVIDUAL = 5
+
+
+def notify_top_stories() -> int:
+    """Push generated, image-bearing stories scoring >= PUSH_SCORE_THRESHOLD, once each.
+
+    Returns the number of stories notified.
+    """
+    stories = list(
+        Story.objects.filter(status=StoryStatus.GENERATED, notified_at__isnull=True)
+        .exclude(image_file="")
+        .annotate(total=F("importance") + F("shareability"))
+        .filter(total__gte=settings.PUSH_SCORE_THRESHOLD)
+        .select_related("source")
+        .order_by("-total", "-published_at")
+    )
+    if not stories:
+        return 0
+    if len(stories) <= MAX_INDIVIDUAL:
+        for story in stories:
+            notify(
+                title=f"{story.total_score}/20 · {story.post_title or story.title}",
+                body=(story.post_description or story.summary)[:140],
+                url=f"/story/{story.id}/",
+                tag=f"story-{story.id}",
+            )
+    else:
+        top = stories[0]
+        notify(
+            title=f"{len(stories)} top stories ready ({settings.PUSH_SCORE_THRESHOLD}+)",
+            body=f"Best: {top.post_title or top.title}"[:140],
+            url="/",
+            tag="top-stories",
+        )
+    now = timezone.now()
+    Story.objects.filter(id__in=[s.id for s in stories]).update(notified_at=now)
+    logger.info("push: notified %d top stories", len(stories))
+    return len(stories)

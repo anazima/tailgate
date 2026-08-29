@@ -70,3 +70,57 @@ def test_push_test_endpoint(client, vapid, monkeypatch) -> None:
     monkeypatch.setattr(push, "notify", lambda *a, **k: 2)
     resp = client.post(reverse("news:push_test"))
     assert resp.content == b"Sent to 2 devices."
+
+
+@pytest.mark.django_db
+def test_notify_top_stories_pushes_each_once(source, make_story, vapid, settings, monkeypatch) -> None:
+    from news.models import StoryStatus
+
+    settings.PUSH_SCORE_THRESHOLD = 18
+    sent = []
+    monkeypatch.setattr(
+        push, "notify", lambda title, body="", url="/", tag="": sent.append((title, url)) or 1
+    )
+    top = make_story(
+        source,
+        "Fire",
+        status=StoryStatus.GENERATED,
+        importance=9,
+        shareability=9,
+        post_title="Big fire",
+        post_description="Desc",
+        image_file="stories/1.jpg",
+    )
+    make_story(source, "No image", status=StoryStatus.GENERATED, importance=10, shareability=10)
+    make_story(
+        source, "Low", status=StoryStatus.GENERATED, importance=8, shareability=9, image_file="s/2.jpg"
+    )
+    make_story(
+        source, "Not generated", status=StoryStatus.SCORED, importance=9, shareability=9, image_file="s/3.jpg"
+    )
+
+    assert push.notify_top_stories() == 1
+    assert sent == [("18/20 · Big fire", f"/story/{top.id}/")]
+    top.refresh_from_db()
+    assert top.notified_at is not None
+    assert push.notify_top_stories() == 0  # never twice
+    assert len(sent) == 1
+
+
+@pytest.mark.django_db
+def test_notify_top_stories_collapses_many(source, make_story, vapid, monkeypatch) -> None:
+    from news.models import StoryStatus
+
+    sent = []
+    monkeypatch.setattr(push, "notify", lambda title, body="", url="/", tag="": sent.append(title) or 1)
+    for i in range(6):
+        make_story(
+            source,
+            f"S{i}",
+            status=StoryStatus.GENERATED,
+            importance=9,
+            shareability=9,
+            image_file=f"s/{i}.jpg",
+        )
+    assert push.notify_top_stories() == 6
+    assert sent == ["6 top stories ready (18+)"]

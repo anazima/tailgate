@@ -44,8 +44,10 @@ The dashboard can send push notifications to any browser that opts in (menu →
 3. iPhone/iPad: Safari only allows push for sites added to the Home Screen
    (Share → Add to Home Screen), then enable notifications from inside that app.
 
-Send from code with `news.services.push.notify(title, body, url)` — for example at
-the end of a pipeline run.
+Each pipeline run pushes one notification per newly generated story scoring
+`PUSH_SCORE_THRESHOLD` or higher (default 18/20; only stories with an image, each
+story once). Six or more at once collapse into a single summary notification.
+`news.services.push.notify(title, body, url)` sends anything else you need.
 
 ## Environment variables
 
@@ -63,6 +65,7 @@ the end of a pipeline run.
 | `GENERATE_REEL_SCRIPT` | `false` | also produce a ~100-word reel narration |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | empty | browser push keys; `python manage.py generate_vapid_keys` |
 | `VAPID_CLAIMS_EMAIL` | — | contact email sent with each push (required by push services) |
+| `PUSH_SCORE_THRESHOLD` | `18` | push a notification for new stories scoring at least this |
 | `RETENTION_DAYS` | `30` | stories, images and run logs older than this are deleted at the end of each pipeline run |
 
 ## Deployment (single Linux VPS, Ubuntu 24.04)
