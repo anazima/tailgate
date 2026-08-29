@@ -19,9 +19,14 @@ def load_prompt(name: str) -> str:
     return (PROMPTS_DIR / name).read_text()
 
 
-def get_client() -> anthropic.Anthropic:
+def require_api_key() -> None:
+    """Fail fast with a clear message; callers surface it on the dashboard."""
     if not settings.ANTHROPIC_API_KEY:
         raise RuntimeError("ANTHROPIC_API_KEY is not set — add it to .env")
+
+
+def get_client() -> anthropic.Anthropic:
+    require_api_key()
     return anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 

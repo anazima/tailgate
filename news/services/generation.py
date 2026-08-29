@@ -74,6 +74,7 @@ def generate_for_story(story: Story) -> bool:
 
 def generate_all() -> int:
     """Generate content for every eligible story. Returns the number generated."""
+    claude.require_api_key()
     generated = 0
     for story in eligible_stories():
         try:

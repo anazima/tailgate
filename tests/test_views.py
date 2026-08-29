@@ -136,3 +136,15 @@ def test_run_pipeline_command_records_run_and_survives_step_errors(monkeypatch) 
     run = PipelineRun.objects.get(command="run_pipeline")
     assert run.stories_fetched == 3 and run.finished_at is not None
     assert "score: no api key" in run.error
+
+
+@pytest.mark.django_db
+def test_run_pipeline_reports_missing_api_key(monkeypatch, settings) -> None:
+    from django.core.management import call_command
+
+    settings.ANTHROPIC_API_KEY = ""
+    monkeypatch.setattr("news.services.feeds.fetch_all", lambda: 0)
+    monkeypatch.setattr("news.services.feeds.compute_clusters", lambda: 0)
+    call_command("run_pipeline")
+    run = PipelineRun.objects.get(command="run_pipeline")
+    assert "ANTHROPIC_API_KEY is not set" in run.error

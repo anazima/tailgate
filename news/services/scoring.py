@@ -88,6 +88,7 @@ def score_batch(stories: list[Story]) -> int:
 
 def score_new_stories() -> int:
     """Score all `new` stories in batches. Returns the number scored."""
+    claude.require_api_key()
     total = 0
     attempted: set[int] = set()
     while True:
