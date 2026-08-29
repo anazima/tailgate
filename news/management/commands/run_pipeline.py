@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -12,7 +13,18 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     help = "Run the full pipeline: fetch feeds → cluster → score → generate content."
 
+    # A run older than this with no finished_at is treated as crashed, not running.
+    STALE_AFTER = timedelta(minutes=45)
+
     def handle(self, *args: object, **options: object) -> None:
+        active = PipelineRun.objects.filter(
+            command="run_pipeline",
+            finished_at__isnull=True,
+            started_at__gte=timezone.now() - self.STALE_AFTER,
+        ).exists()
+        if active:
+            self.stdout.write("run_pipeline: another run is in progress, skipping")
+            return
         run = PipelineRun.objects.create(command="run_pipeline")
         errors: list[str] = []
         try:

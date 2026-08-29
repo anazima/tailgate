@@ -27,8 +27,14 @@ def _last_run() -> PipelineRun | None:
 
 
 def _run_in_progress() -> PipelineRun | None:
+    from news.management.commands.run_pipeline import Command
+
     return (
-        PipelineRun.objects.filter(command="run_pipeline", finished_at__isnull=True)
+        PipelineRun.objects.filter(
+            command="run_pipeline",
+            finished_at__isnull=True,
+            started_at__gte=timezone.now() - Command.STALE_AFTER,
+        )
         .order_by("-started_at")
         .first()
     )

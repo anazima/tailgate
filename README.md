@@ -97,7 +97,7 @@ WantedBy=multi-user.target
 sudo systemctl enable --now texas-news
 ```
 
-### 4. Pipeline timer (replaces cron) — every 3 hours
+### 4. Pipeline timer (replaces cron) — every hour
 
 `/etc/systemd/system/texas-news-pipeline.service`
 
@@ -116,11 +116,11 @@ ExecStart=/opt/texas-news/app/.venv/bin/python manage.py run_pipeline
 
 ```ini
 [Unit]
-Description=Run the Texas News pipeline every 3 hours
+Description=Run the Texas News pipeline every hour
 
 [Timer]
-OnCalendar=*-*-* 00/3:00:00
-RandomizedDelaySec=5m
+OnCalendar=hourly
+RandomizedDelaySec=2m
 Persistent=true
 
 [Install]
@@ -136,11 +136,24 @@ journalctl -u texas-news-pipeline -n 50      # logs of the last runs
 Plain cron alternative (as the `texasnews` user):
 
 ```cron
-0 */3 * * * cd /opt/texas-news/app && .venv/bin/python manage.py run_pipeline >> /var/log/texas-news/pipeline.log 2>&1
+0 * * * * cd /opt/texas-news/app && .venv/bin/python manage.py run_pipeline >> /var/log/texas-news/pipeline.log 2>&1
 ```
 
 The **Run now** button on the dashboard launches the same `run_pipeline` command as a
 detached subprocess, so the web user must be able to write to `media/` and the DB.
+`run_pipeline` skips itself if another run is still in progress, so the timer and the
+button can never overlap.
+
+### Local (macOS) hourly run
+
+`launchd` job at `~/Library/LaunchAgents/com.texasnews.pipeline.plist` (only fires while
+the Mac is awake):
+
+```bash
+launchctl load ~/Library/LaunchAgents/com.texasnews.pipeline.plist     # enable
+launchctl unload ~/Library/LaunchAgents/com.texasnews.pipeline.plist   # disable
+tail -f logs/pipeline.log                                              # watch runs
+```
 
 ### 5. nginx — `/etc/nginx/sites-available/texas-news`
 

@@ -173,3 +173,14 @@ def test_dashboard_hides_stories_without_image_by_default(client, source, make_s
     )
     assert "Imageless" not in client.get(reverse("news:dashboard")).content.decode()
     assert "Imageless" in client.get(reverse("news:dashboard"), {"images": "all"}).content.decode()
+
+
+@pytest.mark.django_db
+def test_run_pipeline_skips_when_another_run_is_active(monkeypatch) -> None:
+    from django.core.management import call_command
+
+    called = []
+    monkeypatch.setattr("news.services.feeds.fetch_all", lambda: called.append(1) or 0)
+    PipelineRun.objects.create(command="run_pipeline")  # unfinished, fresh
+    call_command("run_pipeline")
+    assert called == [] and PipelineRun.objects.count() == 1
