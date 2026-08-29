@@ -1,0 +1,44 @@
+{% extends "news/base.html" %}
+{% block content %}
+<form method="get" class="bg-white border border-stone-200 rounded-lg p-3 mb-5 flex flex-wrap gap-3 items-end text-sm">
+  <label class="flex flex-col gap-1">Status
+    <select name="status" class="border rounded px-2 py-1">
+      {% for value, label in statuses %}
+        <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+      <option value="all" {% if filters.status == "all" %}selected{% endif %}>All</option>
+    </select>
+  </label>
+  <label class="flex flex-col gap-1">Category
+    <select name="category" class="border rounded px-2 py-1">
+      <option value="">Any</option>
+      {% for value, label in categories %}
+        <option value="{{ value }}" {% if filters.category == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="flex flex-col gap-1">City
+    <select name="city" class="border rounded px-2 py-1">
+      <option value="">Any</option>
+      {% for value, label in cities %}
+        <option value="{{ value }}" {% if filters.city == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="flex flex-col gap-1">From
+    <input type="date" name="date_from" value="{{ filters.date_from }}" class="border rounded px-2 py-1"></label>
+  <label class="flex flex-col gap-1">To
+    <input type="date" name="date_to" value="{{ filters.date_to }}" class="border rounded px-2 py-1"></label>
+  <button class="bg-stone-900 text-white px-3 py-1.5 rounded">Filter</button>
+  <a href="{% url 'news:dashboard' %}" class="text-stone-500 hover:underline">Reset</a>
+  <span class="ml-auto text-stone-500">{{ stories|length }} stories</span>
+</form>
+
+{% if stories %}
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+  {% for story in stories %}{% include "news/_card.html" %}{% endfor %}
+</div>
+{% else %}
+<p class="text-stone-500 text-center py-16">No stories match. Try another status filter, or press <strong>Run now</strong>.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,11 @@
+{% if run_in_progress or starting %}
+<span class="text-amber-300" hx-get="{% url 'news:pipeline_status' %}" hx-trigger="load delay:8s" hx-swap="outerHTML">
+  Pipeline running…
+</span>
+{% elif last_run %}
+<span class="text-stone-400" title="{{ last_run.command }}{% if last_run.error %} — error: {{ last_run.error|truncatechars:200 }}{% endif %}">
+  Last run {{ last_run.started_at|timesince }} ago{% if last_run.error %} <span class="text-red-400">(error)</span>{% endif %}
+</span>
+{% else %}
+<span class="text-stone-400">No runs yet</span>
+{% endif %}

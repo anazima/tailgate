@@ -1,0 +1,44 @@
+{% extends "news/base.html" %}
+{% block title %}{{ story.post_title|default:story.title }}{% endblock %}
+{% block content %}
+<a href="{% url 'news:dashboard' %}" class="text-sm text-stone-500 hover:underline">&larr; Dashboard</a>
+<div class="grid gap-6 lg:grid-cols-3 mt-3">
+  <div class="lg:col-span-2 flex flex-col gap-4">
+    {% include "news/_card.html" %}
+    <section class="bg-white border border-stone-200 rounded-lg p-4 text-sm flex flex-col gap-3">
+      <h2 class="font-semibold">Scoring</h2>
+      {% if story.scored_at %}
+        <p>Importance <strong>{{ story.importance }}</strong> · Shareability <strong>{{ story.shareability }}</strong>
+           · {{ story.get_category_display }}{% if story.is_political %} · <span class="text-red-700">political</span>{% endif %}</p>
+        <p class="text-stone-700">{{ story.score_reason }}</p>
+        <p class="text-xs text-stone-500">Scored {{ story.scored_at }}</p>
+      {% else %}<p class="text-stone-500">Not scored yet.</p>{% endif %}
+    </section>
+    {% if story.reel_script %}
+    <section class="bg-white border border-stone-200 rounded-lg p-4 text-sm flex flex-col gap-2">
+      <h2 class="font-semibold">Reel script</h2>
+      <p class="whitespace-pre-line">{{ story.reel_script }}</p>
+      <button class="btn-copy self-start" data-copy="{{ story.reel_script }}">Copy reel script</button>
+    </section>
+    {% endif %}
+  </div>
+  <aside class="bg-white border border-stone-200 rounded-lg p-4 text-sm flex flex-col gap-2 break-words">
+    <h2 class="font-semibold">Raw feed data</h2>
+    <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+      <dt class="text-stone-500">Title</dt><dd>{{ story.title }}</dd>
+      <dt class="text-stone-500">URL</dt><dd><a href="{{ story.url }}" class="text-blue-700 hover:underline" target="_blank" rel="noopener">{{ story.url }}</a></dd>
+      <dt class="text-stone-500">Source</dt><dd>{{ story.source.name }} ({{ story.source.get_city_display }})</dd>
+      <dt class="text-stone-500">Published</dt><dd>{{ story.published_at }}</dd>
+      <dt class="text-stone-500">Fetched</dt><dd>{{ story.fetched_at }}</dd>
+      <dt class="text-stone-500">Status</dt><dd>{{ story.get_status_display }}</dd>
+      <dt class="text-stone-500">Cluster</dt><dd>{{ story.cluster_size }} source{{ story.cluster_size|pluralize }} · <code class="text-xs">{{ story.cluster_key }}</code></dd>
+      {% if story.image_url %}<dt class="text-stone-500">Image URL</dt><dd><a href="{{ story.image_url }}" class="text-blue-700 hover:underline" target="_blank" rel="noopener">{{ story.image_url }}</a>
+        {% if story.image_width %}<br>{{ story.image_width }}×{{ story.image_height }}{% endif %}</dd>{% endif %}
+      {% if story.generated_at %}<dt class="text-stone-500">Generated</dt><dd>{{ story.generated_at }}</dd>{% endif %}
+      {% if story.posted_at %}<dt class="text-stone-500">Posted</dt><dd>{{ story.posted_at }}</dd>{% endif %}
+      {% if story.skipped_at %}<dt class="text-stone-500">Skipped</dt><dd>{{ story.skipped_at }}</dd>{% endif %}
+    </dl>
+    {% if story.summary %}<h3 class="font-semibold mt-2">Feed summary</h3><p class="text-stone-700">{{ story.summary }}</p>{% endif %}
+  </aside>
+</div>
+{% endblock %}

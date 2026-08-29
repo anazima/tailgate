@@ -1,0 +1,44 @@
+<!doctype html>
+{% load static %}
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Texas News Curator{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+  <link rel="stylesheet" href="{% static 'news/app.css' %}">
+</head>
+<body class="bg-stone-100 text-stone-900 min-h-screen" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <header class="bg-stone-900 text-stone-100">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+      <a href="{% url 'news:dashboard' %}" class="text-lg font-semibold tracking-tight">Texas News Curator</a>
+      <nav class="flex gap-4 text-sm">
+        <a href="{% url 'news:dashboard' %}" class="hover:underline">Dashboard</a>
+        <a href="{% url 'news:hidden' %}" class="hover:underline">Hidden</a>
+        <a href="/admin/news/source/" class="hover:underline">Sources</a>
+        <a href="/admin/" class="hover:underline">Admin</a>
+      </nav>
+      <div class="ml-auto flex items-center gap-3 text-sm">
+        <span id="pipeline-status">{% include "news/_pipeline_status.html" %}</span>
+        <form hx-post="{% url 'news:run_now' %}" hx-target="#pipeline-status" hx-swap="innerHTML">
+          {% csrf_token %}
+          <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-stone-900 font-medium px-3 py-1 rounded"
+                  {% if run_in_progress %}disabled{% endif %}>Run now</button>
+        </form>
+        {% if request.session.dashboard_authed %}
+        <form method="post" action="{% url 'news:logout' %}">{% csrf_token %}
+          <button class="text-stone-400 hover:text-white">Log out</button></form>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+  <main class="max-w-6xl mx-auto px-4 py-6">{% block content %}{% endblock %}</main>
+
+  <dialog id="lightbox" class="p-0 bg-transparent max-w-[95vw] max-h-[95vh] backdrop:bg-black/80">
+    <img id="lightbox-img" src="" alt="" class="max-w-[95vw] max-h-[95vh] object-contain cursor-zoom-out">
+  </dialog>
+  <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-stone-900 text-white text-sm px-4 py-2 rounded shadow hidden"></div>
+  <script src="{% static 'news/app.js' %}" defer></script>
+</body>
+</html>

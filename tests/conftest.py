@@ -31,3 +31,9 @@ def make_story(db):
         )
 
     return _make
+
+
+@pytest.fixture(autouse=True)
+def _no_password(settings) -> None:
+    """Tests never depend on whatever DASHBOARD_PASSWORD is in the local .env."""
+    settings.DASHBOARD_PASSWORD = ""

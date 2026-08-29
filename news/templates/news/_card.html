@@ -1,0 +1,61 @@
+<article class="bg-white rounded-lg shadow-sm border border-stone-200 overflow-hidden flex flex-col">
+  <div class="relative bg-stone-200 aspect-video">
+    {% if story.image_file %}
+      <img src="{{ MEDIA_URL }}{{ story.image_file }}" alt="" loading="lazy"
+           class="w-full h-full object-cover cursor-zoom-in" data-lightbox="{{ MEDIA_URL }}{{ story.image_file }}">
+    {% elif story.image_url %}
+      <img src="{{ story.image_url }}" alt="" loading="lazy"
+           class="w-full h-full object-cover cursor-zoom-in" data-lightbox="{{ story.image_url }}">
+    {% else %}
+      <div class="w-full h-full flex items-center justify-center text-stone-400 text-sm">No image</div>
+      <span class="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded">No image</span>
+    {% endif %}
+    {% if story.cluster_size > 1 %}
+      <span class="absolute top-2 right-2 bg-stone-900/80 text-white text-xs px-2 py-0.5 rounded">{{ story.cluster_size }} sources</span>
+    {% endif %}
+  </div>
+
+  <div class="p-4 flex flex-col gap-2 grow">
+    <div class="flex flex-wrap gap-1 text-xs">
+      {% if story.importance %}<span class="bg-blue-100 text-blue-900 px-2 py-0.5 rounded" title="Importance">Imp {{ story.importance }}</span>{% endif %}
+      {% if story.shareability %}<span class="bg-green-100 text-green-900 px-2 py-0.5 rounded" title="Shareability">Share {{ story.shareability }}</span>{% endif %}
+      {% if story.category %}<span class="bg-stone-100 text-stone-700 px-2 py-0.5 rounded">{{ story.get_category_display }}</span>{% endif %}
+      {% if story.is_cowboys %}<span class="bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded">Cowboys</span>{% endif %}
+      <span class="ml-auto text-stone-500 uppercase">{{ story.get_status_display }}</span>
+    </div>
+
+    <h2 class="font-semibold leading-snug">
+      <a href="{% url 'news:story_detail' story.id %}" class="hover:underline">{{ story.post_title|default:story.title }}</a>
+    </h2>
+    {% if story.post_description %}
+      <p class="text-sm text-stone-700">{{ story.post_description }}</p>
+    {% elif story.summary %}
+      <p class="text-sm text-stone-500">{{ story.summary|truncatechars:220 }}</p>
+    {% endif %}
+
+    <p class="text-xs text-stone-500 mt-auto pt-2">
+      {{ story.source.name }} · {{ story.source.get_city_display }} · {{ story.published_at|timesince }} ago
+    </p>
+
+    <div class="flex flex-wrap gap-1.5 text-xs pt-1">
+      {% if story.post_title %}
+        <button class="btn-copy" data-copy="{{ story.post_title }}">Copy title</button>
+        <button class="btn-copy" data-copy="{{ story.post_description }}">Copy description</button>
+        <button class="btn-copy" data-copy="{{ story.post_title }}&#10;&#10;{{ story.post_description }}">Copy both</button>
+      {% endif %}
+      {% if story.image_file %}
+        <a class="btn" href="{% url 'news:download_image' story.id %}">Download image</a>
+      {% endif %}
+      <a class="btn" href="{{ story.url }}" target="_blank" rel="noopener">Open article</a>
+      {% if story.status == "hidden" %}
+        <button class="btn-primary" hx-post="{% url 'news:story_action' story.id %}" hx-vals='{"action": "unhide"}'
+                hx-target="closest article" hx-swap="outerHTML">Unhide</button>
+      {% elif story.status != "posted" and story.status != "skipped" %}
+        <button class="btn-primary" hx-post="{% url 'news:story_action' story.id %}" hx-vals='{"action": "posted"}'
+                hx-target="closest article" hx-swap="outerHTML">Mark posted</button>
+        <button class="btn" hx-post="{% url 'news:story_action' story.id %}" hx-vals='{"action": "skip"}'
+                hx-target="closest article" hx-swap="outerHTML" hx-confirm="Skip this story?">Skip</button>
+      {% endif %}
+    </div>
+  </div>
+</article>

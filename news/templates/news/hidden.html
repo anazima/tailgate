@@ -1,0 +1,13 @@
+{% extends "news/base.html" %}
+{% block title %}Hidden stories{% endblock %}
+{% block content %}
+<h1 class="text-xl font-semibold mb-1">Hidden stories</h1>
+<p class="text-sm text-stone-500 mb-5">Auto-hidden as political or live sports. Unhide to allow generation on the next run.</p>
+{% if stories %}
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+  {% for story in stories %}{% include "news/_card.html" %}{% endfor %}
+</div>
+{% else %}
+<p class="text-stone-500 text-center py-16">Nothing hidden.</p>
+{% endif %}
+{% endblock %}

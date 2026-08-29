@@ -1,0 +1,8 @@
+.btn, .btn-copy, .btn-primary {
+  display: inline-block; padding: .25rem .6rem; border-radius: .25rem; border: 1px solid #d6d3d1;
+  background: #fafaf9; color: #1c1917; cursor: pointer;
+}
+.btn:hover, .btn-copy:hover { background: #e7e5e4; }
+.btn-primary { background: #1c1917; color: #fff; border-color: #1c1917; }
+.btn-primary:hover { background: #44403c; }
+.htmx-request .btn, .htmx-request .btn-primary { opacity: .5; pointer-events: none; }
