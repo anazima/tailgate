@@ -27,7 +27,25 @@
   const lightbox = document.getElementById("lightbox");
   const lightboxImg = document.getElementById("lightbox-img");
 
+  const menuBtn = document.getElementById("menu-btn");
+  const menu = document.getElementById("menu");
+  const filtersBtn = document.getElementById("filters-btn");
+  const filters = document.getElementById("filters");
+
   document.addEventListener("click", (event) => {
+    if (menuBtn && menuBtn.contains(event.target)) {
+      const open = menu.classList.toggle("hidden") === false;
+      menuBtn.setAttribute("aria-expanded", String(open));
+      return;
+    }
+    if (menu && !menu.classList.contains("hidden") && !menu.contains(event.target)) {
+      menu.classList.add("hidden");
+      menuBtn.setAttribute("aria-expanded", "false");
+    }
+    if (filtersBtn && filtersBtn.contains(event.target)) {
+      filters.classList.toggle("hidden");
+      return;
+    }
     const copyBtn = event.target.closest("[data-copy]");
     if (copyBtn) {
       copyText(copyBtn.dataset.copy).then(() => showToast("Copied"), () => showToast("Copy failed"));

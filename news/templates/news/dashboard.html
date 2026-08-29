@@ -1,6 +1,9 @@
 {% extends "news/base.html" %}
 {% block content %}
-<form method="get" class="bg-white border border-stone-200 rounded-lg p-3 mb-5 flex flex-wrap gap-3 items-end text-sm">
+<button id="filters-btn" type="button" class="sm:hidden mb-3 w-full flex items-center justify-between bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm">
+  <span>Filters</span><span class="text-stone-500">{{ stories|length }} stories</span>
+</button>
+<form id="filters" method="get" class="hidden sm:flex bg-white border border-stone-200 rounded-lg p-3 mb-5 flex-wrap gap-3 items-end text-sm">
   <label class="flex flex-col gap-1">Status
     <select name="status" class="border rounded px-2 py-1">
       {% for value, label in statuses %}
