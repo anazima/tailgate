@@ -1,0 +1,10 @@
+[Unit]
+Description=Texas News Curator pipeline run (tailgate.retoph.com)
+After=network-online.target postgresql.service
+
+[Service]
+Type=oneshot
+User=www
+Group=www
+WorkingDirectory=/www/wwwroot/tailgate
+ExecStart=/www/wwwroot/tailgate/venv/bin/python manage.py run_pipeline

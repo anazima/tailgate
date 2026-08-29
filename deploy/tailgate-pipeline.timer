@@ -1,0 +1,9 @@
+[Unit]
+Description=Run the Texas News pipeline at the top of every hour (Qatar time)
+
+[Timer]
+OnCalendar=Asia/Qatar *-*-* *:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

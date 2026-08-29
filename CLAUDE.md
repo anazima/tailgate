@@ -44,7 +44,9 @@ boring, and reliable. Auth is a single Django user (same login for the dashboard
   `launchd` job locally — top of every hour. Do not add Celery/Redis.
 - Dev server port is **8100** (pinned in `manage.py`; reserved in
   `/Users/Shared/claude-ports/registry.json`). Never use 8000.
-- Deployment target: single Linux VPS (Hostinger KVM), gunicorn + nginx.
+- Deployment target: shared AWS Ubuntu VPS managed by aaPanel — `https://tailgate.retoph.com`,
+  gunicorn on 127.0.0.1:8100 under supervisor as user `www`, nginx rules in `deploy/nginx-rewrite.conf`,
+  systemd timer for the pipeline. See README §Deployment; update with `deploy/pull-deploy.sh`.
 - Config via environment variables (`python-dotenv` in dev). Never commit secrets.
 
 ## Project layout
@@ -81,6 +83,7 @@ texas-news-curator/
 │       ├── run_pipeline.py # fetch → cluster → score → generate → notify → cleanup
 │       ├── cleanup_old.py
 │       └── generate_vapid_keys.py
+├── deploy/                 # gunicorn/supervisor/nginx/systemd configs + pull-deploy.sh
 ├── media/                  # downloaded images (gitignored)
 ├── logs/                   # local launchd pipeline log (gitignored)
 └── tests/
@@ -269,8 +272,6 @@ plus: Django-user login, hourly schedule (launchd locally, systemd on the VPS),
 30-day retention, browser push for 18+ stories, TN favicon/manifest.
 
 Not yet done:
-- Deploy to the Hostinger VPS (README §Deployment). Push notifications on phones
-  need the HTTPS deployment.
 - Dallas Morning News / WFAA / Star-Telegram produce no generated stories so far —
   check their feeds' `last_error` in admin.
 - ~8 generated descriptions run slightly over 300 chars; no hard trim yet.

@@ -68,150 +68,49 @@ story once). Six or more at once collapse into a single summary notification.
 | `PUSH_SCORE_THRESHOLD` | `18` | push a notification for new stories scoring at least this |
 | `RETENTION_DAYS` | `30` | stories, images and run logs older than this are deleted at the end of each pipeline run |
 
-## Deployment (single Linux VPS, Ubuntu 24.04)
+## Deployment — tailgate.retoph.com (AWS Ubuntu 24.04, aaPanel)
 
-### 1. System packages and app user
+The production box is shared with other sites and managed by aaPanel; nginx, PostgreSQL 16
+and supervisor already exist there. Everything below is checked in under `deploy/`.
 
-```bash
-sudo apt install -y python3.12 python3.12-venv postgresql-16 nginx
-sudo adduser --system --group --home /opt/texas-news texasnews
-sudo -u postgres psql -c "CREATE USER texas_news WITH PASSWORD 'change-me';"
-sudo -u postgres psql -c "CREATE DATABASE texas_news OWNER texas_news;"
-```
+| Piece | Where |
+|---|---|
+| App checkout | `/www/wwwroot/tailgate` (git clone of `main`, owner `ubuntu:www`) |
+| Virtualenv | `/www/wwwroot/tailgate/venv` |
+| Secrets | `/www/wwwroot/tailgate/.env` (mode 640) |
+| gunicorn | supervisor program `tailgate`, user `www`, `127.0.0.1:8100` — `deploy/gunicorn.conf.py`, `deploy/supervisor-tailgate.conf` |
+| nginx | aaPanel vhost for the domain + `deploy/nginx-rewrite.conf` installed as `/www/server/panel/vhost/rewrite/tailgate.retoph.com.conf` (static/media from disk, everything else proxied) |
+| TLS | Let's Encrypt via aaPanel (auto-renews); Cloudflare in front |
+| Pipeline | `deploy/tailgate-pipeline.service` + `.timer` — top of every hour (Asia/Qatar), runs as `www` |
+| Logs | `/www/wwwroot/tailgate/logs/` (gunicorn + supervisor), `journalctl -u tailgate-pipeline` |
 
-### 2. App checkout
-
-```bash
-sudo -u texasnews git clone <repo> /opt/texas-news/app
-cd /opt/texas-news/app
-sudo -u texasnews python3.12 -m venv .venv
-sudo -u texasnews .venv/bin/pip install -r requirements.txt
-sudo -u texasnews cp .env.example .env    # edit: DEBUG=false, DB_ENGINE=postgres, SECRET_KEY, ALLOWED_HOSTS, keys
-sudo -u texasnews .venv/bin/python manage.py migrate
-sudo -u texasnews .venv/bin/python manage.py collectstatic --noinput
-sudo -u texasnews .venv/bin/python manage.py createsuperuser
-```
-
-`.env` is loaded by `python-dotenv` from the project root; keep it mode `600`.
-
-### 3. gunicorn — `/etc/systemd/system/texas-news.service`
-
-```ini
-[Unit]
-Description=Texas News Curator (gunicorn)
-After=network.target postgresql.service
-
-[Service]
-User=texasnews
-Group=texasnews
-WorkingDirectory=/opt/texas-news/app
-ExecStart=/opt/texas-news/app/.venv/bin/gunicorn config.wsgi:application \
-    --bind unix:/run/texas-news/gunicorn.sock --workers 2 --timeout 60
-RuntimeDirectory=texas-news
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-```
+### Update after a push to `main`
 
 ```bash
-sudo systemctl enable --now texas-news
+ssh aws-web /www/wwwroot/tailgate/deploy/pull-deploy.sh
 ```
 
-### 4. Pipeline timer (replaces cron) — top of every hour (Qatar time)
+Pulls, installs requirements, migrates, collects static, fixes permissions, restarts
+gunicorn and smoke-tests `/login/`.
 
-`/etc/systemd/system/texas-news-pipeline.service`
-
-```ini
-[Unit]
-Description=Texas News Curator pipeline run
-
-[Service]
-Type=oneshot
-User=texasnews
-WorkingDirectory=/opt/texas-news/app
-ExecStart=/opt/texas-news/app/.venv/bin/python manage.py run_pipeline
-```
-
-`/etc/systemd/system/texas-news-pipeline.timer`
-
-```ini
-[Unit]
-Description=Run the Texas News pipeline every hour
-
-[Timer]
-OnCalendar=Asia/Qatar *-*-* *:00:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-```
+### First-time setup (already done; kept for reference)
 
 ```bash
-sudo systemctl enable --now texas-news-pipeline.timer
-systemctl list-timers texas-news-pipeline.timer
-journalctl -u texas-news-pipeline -n 50      # logs of the last runs
+sudo -u postgres psql -c "CREATE ROLE tailgate LOGIN PASSWORD '...';"
+sudo -u postgres psql -c "CREATE DATABASE tailgate OWNER tailgate;"
+git clone https://github.com/anazima/tailgate.git /www/wwwroot/tailgate
+cd /www/wwwroot/tailgate && python3.12 -m venv venv && venv/bin/pip install -r requirements.txt
+mkdir -p logs media staticfiles && cp .env.example .env   # fill in; DEBUG=false, DB_ENGINE=postgres
+venv/bin/python manage.py migrate && venv/bin/python manage.py collectstatic --noinput
+sudo cp deploy/supervisor-tailgate.conf /etc/supervisor/conf.d/tailgate.conf
+sudo supervisorctl reread && sudo supervisorctl update
+sudo cp deploy/nginx-rewrite.conf /www/server/panel/vhost/rewrite/tailgate.retoph.com.conf
+sudo /www/server/nginx/sbin/nginx -t && sudo /www/server/nginx/sbin/nginx -s reload
+sudo cp deploy/tailgate-pipeline.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now tailgate-pipeline.timer
 ```
 
-Plain cron alternative (as the `texasnews` user):
+Useful checks: `sudo supervisorctl status tailgate`, `systemctl list-timers tailgate-pipeline.timer`,
+`sudo journalctl -u tailgate-pipeline -n 50`.
 
-```cron
-CRON_TZ=Asia/Qatar
-0 * * * * cd /opt/texas-news/app && .venv/bin/python manage.py run_pipeline >> /var/log/texas-news/pipeline.log 2>&1
-```
-
-The **Run now** button on the dashboard launches the same `run_pipeline` command as a
-detached subprocess, so the web user must be able to write to `media/` and the DB.
-`run_pipeline` skips itself if another run is still in progress, so the timer and the
-button can never overlap.
-
-### Local (macOS) hourly run
-
-`launchd` job at `~/Library/LaunchAgents/com.texasnews.pipeline.plist` runs at the top of
-every hour in the Mac's local time (only while the Mac is awake; a missed hour runs once on wake):
-
-```bash
-launchctl load ~/Library/LaunchAgents/com.texasnews.pipeline.plist     # enable
-launchctl unload ~/Library/LaunchAgents/com.texasnews.pipeline.plist   # disable
-tail -f logs/pipeline.log                                              # watch runs
-```
-
-### 5. nginx — `/etc/nginx/sites-available/texas-news`
-
-```nginx
-server {
-    listen 80;
-    server_name news.example.com;
-    client_max_body_size 5m;
-
-    location /static/ { alias /opt/texas-news/app/staticfiles/; expires 7d; }
-    location /media/  { alias /opt/texas-news/app/media/; expires 1d; }
-
-    location / {
-        proxy_pass http://unix:/run/texas-news/gunicorn.sock;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-```bash
-sudo ln -s /etc/nginx/sites-available/texas-news /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d news.example.com     # TLS
-```
-
-`media/` (downloaded story images) is served by nginx in production and by Django
-only when `DEBUG=true`. Images older than `RETENTION_DAYS` are deleted automatically
-along with their stories at the end of every pipeline run.
-
-### 6. Updating
-
-```bash
-cd /opt/texas-news/app && sudo -u texasnews git pull
-sudo -u texasnews .venv/bin/pip install -r requirements.txt
-sudo -u texasnews .venv/bin/python manage.py migrate
-sudo -u texasnews .venv/bin/python manage.py collectstatic --noinput
-sudo systemctl restart texas-news
 ```
