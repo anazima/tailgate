@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from news.services.images import extract_article_text, extract_image_url
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -35,3 +37,27 @@ def test_extract_article_text_prefers_article_paragraphs() -> None:
 
 def test_extract_article_text_limit() -> None:
     assert len(extract_article_text(load("article_og.html"), limit=10)) == 10
+
+
+@pytest.mark.django_db
+def test_attach_image_falls_back_to_feed_image_when_article_blocked(source, make_story, monkeypatch) -> None:
+    from news.services import images
+
+    story = make_story(source, "Blocked", image_url="https://cdn/feed.jpg")
+    calls = []
+    monkeypatch.setattr(images, "fetch_article_html", lambda url: (_ for _ in ()).throw(RuntimeError("403")))
+    monkeypatch.setattr(images, "download_image", lambda s, url: calls.append(url) or True)
+    assert images.attach_image(story) == ""
+    assert calls == ["https://cdn/feed.jpg"]
+
+
+@pytest.mark.django_db
+def test_attach_image_prefers_og_image(source, make_story, monkeypatch) -> None:
+    from news.services import images
+
+    story = make_story(source, "Open", image_url="https://cdn/feed.jpg")
+    calls = []
+    monkeypatch.setattr(images, "fetch_article_html", lambda url: load("article_og.html"))
+    monkeypatch.setattr(images, "download_image", lambda s, url: calls.append(url) or True)
+    images.attach_image(story)
+    assert calls == ["https://cdn.example.com/og.jpg?w=1200"]

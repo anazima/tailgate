@@ -72,6 +72,7 @@ def _apply_filters(request: HttpRequest, stories: QuerySet[Story]) -> tuple[Quer
         "date_from": request.GET.get("date_from", ""),
         "date_to": request.GET.get("date_to", ""),
         "images": request.GET.get("images", "with"),
+        "sort": request.GET.get("sort", "newest"),
     }
     if filters["images"] != "all":
         stories = stories.exclude(image_file="")
@@ -90,7 +91,8 @@ def _apply_filters(request: HttpRequest, stories: QuerySet[Story]) -> tuple[Quer
 
 def dashboard(request: HttpRequest) -> HttpResponse:
     stories, filters = _apply_filters(request, _ranked())
-    stories = stories.order_by("-total", "-published_at")[:200]
+    order = ("-total", "-published_at") if filters["sort"] == "score" else ("-published_at", "-total")
+    stories = stories.order_by(*order)[:200]
     context = {
         "stories": stories,
         "filters": filters,

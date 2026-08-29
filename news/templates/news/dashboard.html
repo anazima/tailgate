@@ -34,6 +34,12 @@
       <option value="all" {% if filters.images == "all" %}selected{% endif %}>All</option>
     </select>
   </label>
+  <label class="flex flex-col gap-1">Sort
+    <select name="sort" class="border rounded px-2 py-1">
+      <option value="newest" {% if filters.sort == "newest" %}selected{% endif %}>Newest</option>
+      <option value="score" {% if filters.sort == "score" %}selected{% endif %}>Top score</option>
+    </select>
+  </label>
   <label class="flex flex-col gap-1">From
     <input type="date" name="date_from" value="{{ filters.date_from }}" class="border rounded px-2 py-1"></label>
   <label class="flex flex-col gap-1">To

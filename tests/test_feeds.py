@@ -86,3 +86,20 @@ def test_entry_summary_strips_tags_and_unescapes_entities() -> None:
 
     entry = {"summary": "<p>Texas A&amp;M &amp; friends &#8212; <b>bold</b></p>"}
     assert _entry_summary(entry) == "Texas A&M & friends — bold"
+
+
+@pytest.mark.parametrize(
+    ("entry", "expected"),
+    [
+        ({"media_content": [{"url": "https://a/b.jpg", "medium": "image"}]}, "https://a/b.jpg"),
+        ({"media_thumbnail": [{"url": "https://a/t.jpg"}]}, "https://a/t.jpg"),
+        ({"enclosures": [{"href": "https://a/e.jpg", "type": "image/jpeg"}]}, "https://a/e.jpg"),
+        ({"enclosures": [{"href": "https://a/e.mp3", "type": "audio/mpeg"}]}, ""),
+        ({"summary": '<p>x</p><img src="https://a/i.png" alt="">'}, "https://a/i.png"),
+        ({"summary": "plain"}, ""),
+    ],
+)
+def test_entry_image_url(entry: dict, expected: str) -> None:
+    from news.services.feeds import entry_image_url
+
+    assert entry_image_url(entry) == expected

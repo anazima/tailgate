@@ -93,16 +93,22 @@ def download_image(story: Story, image_url: str) -> bool:
 def attach_image(story: Story) -> str:
     """Fetch the article and attach its main image. Returns the article text.
 
+    Falls back to the image URL the RSS feed carried (story.image_url) when the
+    article page cannot be fetched or has no usable image — several Texas sites
+    (WFAA, KXAN, KTSM) return 403 to non-browser requests but still serve images.
     Never raises: on any failure the story simply keeps no image.
     """
+    feed_image = story.image_url
+    html = ""
     try:
         html = fetch_article_html(story.url)
     except Exception as exc:
         logger.warning("article fetch failed for story %s: %s", story.id, exc)
-        return ""
-    image_url = extract_image_url(html, story.url)
-    if image_url:
-        download_image(story, image_url)
+    image_url = extract_image_url(html, story.url) if html else None
+    if image_url and download_image(story, image_url):
+        pass
+    elif feed_image and download_image(story, feed_image):
+        logger.info("used feed image for story %s", story.id)
     else:
         logger.info("no image found for story %s", story.id)
-    return extract_article_text(html)
+    return extract_article_text(html) if html else ""

@@ -114,6 +114,32 @@ def _entry_published(entry: feedparser.FeedParserDict) -> datetime | None:
     return None
 
 
+def entry_image_url(entry: feedparser.FeedParserDict) -> str:
+    """Best image URL carried by the feed entry itself (media:content, thumbnail, enclosure, <img>)."""
+    candidates: list[str] = []
+    for media in entry.get("media_content", []) or []:
+        if media.get("url") and (not media.get("medium") or media.get("medium") == "image"):
+            candidates.append(media["url"])
+    for thumb in entry.get("media_thumbnail", []) or []:
+        if thumb.get("url"):
+            candidates.append(thumb["url"])
+    for link in entry.get("enclosures", []) or []:
+        if link.get("href") and "image" in (link.get("type") or ""):
+            candidates.append(link["href"])
+    html_blobs = [entry.get("summary", "") or ""] + [
+        c.get("value", "") for c in entry.get("content", []) or []
+    ]
+    for blob in html_blobs:
+        match = re.search(r"<img[^>]+src=[\"']([^\"']+)", blob)
+        if match:
+            candidates.append(match.group(1))
+    for url in candidates:
+        url = url.strip()
+        if url.startswith("http"):
+            return url[:1000]
+    return ""
+
+
 def _entry_summary(entry: feedparser.FeedParserDict) -> str:
     summary = entry.get("summary", "") or ""
     # Feed summaries are often HTML; strip tags crudely (full parsing not needed).
@@ -150,6 +176,7 @@ def fetch_source(source: Source) -> int:
                 title=title[:500],
                 summary=_entry_summary(entry),
                 published_at=published,
+                image_url=entry_image_url(entry),  # feed hint; replaced by og:image when available
             )
             created += 1
 
