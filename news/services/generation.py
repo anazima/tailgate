@@ -40,7 +40,7 @@ def build_prompt(story: Story, article_text: str) -> str:
         },
         ensure_ascii=False,
     )
-    return template.format(reel_field=reel_field, story_json=story_json)
+    return template.replace("{reel_field}", reel_field).replace("{story_json}", story_json)
 
 
 def apply_generation(story: Story, result: dict) -> None:
@@ -73,13 +73,22 @@ def generate_for_story(story: Story) -> bool:
 
 
 def generate_all() -> int:
-    """Generate content for every eligible story. Returns the number generated."""
+    """Generate content for every eligible story. Returns the number generated.
+
+    Individual failures are logged and skipped; if *every* story fails the error is
+    raised so the pipeline run records it instead of silently reporting zero.
+    """
     claude.require_api_key()
     generated = 0
-    for story in eligible_stories():
+    last_error: Exception | None = None
+    stories = eligible_stories()
+    for story in stories:
         try:
             generate_for_story(story)
             generated += 1
-        except Exception:
+        except Exception as exc:
+            last_error = exc
             logger.exception("generation failed for story %s", story.id)
+    if stories and generated == 0 and last_error is not None:
+        raise RuntimeError(f"all {len(stories)} generations failed; last error: {last_error!r}")
     return generated

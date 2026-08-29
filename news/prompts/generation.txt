@@ -7,7 +7,7 @@ Output a single JSON object with these fields:
 - "post_description": 2-3 sentences, max 300 characters total. Written entirely in
   your own words — never copy a sentence from the article. Neutral reporting tone,
   calm and clear, plain English. End with the source name in the form
-  "via {source_name}".
+  "via SOURCE NAME" (use the source_name field of the story exactly).
 {reel_field}
 
 Output ONLY the JSON object — no prose, no code fences.
