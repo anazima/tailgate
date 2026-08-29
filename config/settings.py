@@ -115,6 +115,9 @@ GENERATE_REEL_SCRIPT = env_bool("GENERATE_REEL_SCRIPT", False)
 # Stories older than this are never ingested.
 FEED_MAX_AGE_HOURS = 72
 
+# Stories, their images, and pipeline-run rows older than this are deleted for good.
+RETENTION_DAYS = int(os.environ.get("RETENTION_DAYS", "30"))
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

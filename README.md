@@ -22,7 +22,8 @@ Run the pipeline by hand:
 python manage.py fetch_feeds        # RSS → Story rows + clustering
 python manage.py score_stories      # Claude scoring (Haiku), hides politics / live sports
 python manage.py generate_content   # image + post text (Sonnet) for stories ≥ threshold
-python manage.py run_pipeline       # all of the above, in order
+python manage.py run_pipeline       # all of the above, in order, then purge old data
+python manage.py cleanup_old        # just the purge (stories/images/runs older than RETENTION_DAYS)
 ```
 
 Tests and lint:
@@ -46,6 +47,7 @@ ruff check . && ruff format --check .
 | `GENERATION_MODEL` | `claude-sonnet-5` | Sonnet-class |
 | `GENERATION_THRESHOLD` | `12` | importance + shareability needed to generate |
 | `GENERATE_REEL_SCRIPT` | `false` | also produce a ~100-word reel narration |
+| `RETENTION_DAYS` | `30` | stories, images and run logs older than this are deleted at the end of each pipeline run |
 
 ## Deployment (single Linux VPS, Ubuntu 24.04)
 
@@ -182,8 +184,8 @@ sudo certbot --nginx -d news.example.com     # TLS
 ```
 
 `media/` (downloaded story images) is served by nginx in production and by Django
-only when `DEBUG=true`. Images are small; prune old ones occasionally with
-`find media/stories -mtime +30 -delete` if disk matters.
+only when `DEBUG=true`. Images older than `RETENTION_DAYS` are deleted automatically
+along with their stories at the end of every pipeline run.
 
 ### 6. Updating
 

@@ -5,13 +5,13 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from news.models import PipelineRun
-from news.services import feeds, generation, scoring
+from news.services import cleanup, feeds, generation, scoring
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = "Run the full pipeline: fetch feeds → cluster → score → generate content."
+    help = "Run the full pipeline: fetch → cluster → score → generate → purge old data."
 
     # A run older than this with no finished_at is treated as crashed, not running.
     STALE_AFTER = timedelta(minutes=45)
@@ -32,6 +32,7 @@ class Command(BaseCommand):
             self._step("cluster", feeds.compute_clusters, errors)
             run.stories_scored = self._step("score", scoring.score_new_stories, errors)
             run.stories_generated = self._step("generate", generation.generate_all, errors)
+            self._step("cleanup", cleanup.purge_old_data, errors)
         finally:
             run.error = "\n".join(errors)[:2000]
             run.finished_at = timezone.now()
