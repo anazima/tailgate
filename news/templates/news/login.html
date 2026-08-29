@@ -7,7 +7,8 @@
   <input type="hidden" name="next" value="{{ next }}">
   <h1 class="font-semibold text-lg">Texas News Curator</h1>
   {% if error %}<p class="text-sm text-red-700">{{ error }}</p>{% endif %}
-  <input type="password" name="password" placeholder="Password" autofocus class="border rounded px-3 py-2">
+  <input type="text" name="username" placeholder="Username" autofocus autocomplete="username" class="border rounded px-3 py-2">
+  <input type="password" name="password" placeholder="Password" autocomplete="current-password" class="border rounded px-3 py-2">
   <button class="bg-stone-900 text-white rounded px-3 py-2">Log in</button>
 </form>
 </body></html>

@@ -40,7 +40,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "news.middleware.DashboardPasswordMiddleware",
+    "news.middleware.DashboardLoginRequiredMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -104,8 +104,6 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- App settings ---
-
-DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 SCORING_MODEL = os.environ.get("SCORING_MODEL", "claude-haiku-4-5")

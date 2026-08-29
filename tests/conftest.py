@@ -33,7 +33,15 @@ def make_story(db):
     return _make
 
 
-@pytest.fixture(autouse=True)
-def _no_password(settings) -> None:
-    """Tests never depend on whatever DASHBOARD_PASSWORD is in the local .env."""
-    settings.DASHBOARD_PASSWORD = ""
+@pytest.fixture
+def user(db):
+    from django.contrib.auth.models import User
+
+    return User.objects.create_user("owner", password="pw")
+
+
+@pytest.fixture
+def client(client, user):
+    """Every view test runs logged in; the login test uses `django.test.Client` directly."""
+    client.force_login(user)
+    return client

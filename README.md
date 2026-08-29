@@ -10,10 +10,10 @@ downloads the image, and posts manually. See `CLAUDE.md` for the full spec.
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env            # fill in ANTHROPIC_API_KEY and DASHBOARD_PASSWORD
+cp .env.example .env            # fill in ANTHROPIC_API_KEY
 python manage.py migrate        # SQLite by default; seeds the 11 Texas sources
 python manage.py runserver      # http://127.0.0.1:8100  (port pinned in manage.py)
-python manage.py createsuperuser   # for /admin/ (source management)
+python manage.py createsuperuser   # login for the dashboard and /admin/
 ```
 
 Run the pipeline by hand:
@@ -39,7 +39,6 @@ ruff check . && ruff format --check .
 | `SECRET_KEY` | — | required in production |
 | `DEBUG` | `true` | set `false` on the VPS |
 | `ALLOWED_HOSTS` | `127.0.0.1,localhost` | comma-separated |
-| `DASHBOARD_PASSWORD` | empty | empty = no login gate (dev only) |
 | `DB_ENGINE` | `sqlite` | `postgres` on the VPS |
 | `POSTGRES_DB/USER/PASSWORD/HOST/PORT` | — | used when `DB_ENGINE=postgres` |
 | `ANTHROPIC_API_KEY` | — | required for scoring/generation |

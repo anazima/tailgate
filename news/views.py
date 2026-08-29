@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from django.conf import settings
+from django.contrib.auth import authenticate, login, logout
 from django.db.models import F, IntegerField, QuerySet
 from django.db.models.functions import Coalesce
 from django.http import FileResponse, Http404, HttpRequest, HttpResponse, HttpResponseNotAllowed
@@ -14,7 +15,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from news.middleware import SESSION_KEY
 from news.models import Category, City, PipelineRun, Story, StoryStatus
 
 logger = logging.getLogger(__name__)
@@ -132,24 +132,27 @@ def story_action(request: HttpRequest, story_id: int) -> HttpResponse:
 
 
 def login_view(request: HttpRequest) -> HttpResponse:
-    if not settings.DASHBOARD_PASSWORD:
+    if request.user.is_authenticated:
         return redirect("news:dashboard")
     error = ""
     if request.method == "POST":
-        if request.POST.get("password", "") == settings.DASHBOARD_PASSWORD:
-            request.session[SESSION_KEY] = True
+        user = authenticate(
+            request, username=request.POST.get("username", ""), password=request.POST.get("password", "")
+        )
+        if user is not None:
+            login(request, user)
             next_url = request.POST.get("next") or request.GET.get("next") or "/"
-            if not next_url.startswith("/"):
+            if not next_url.startswith("/") or next_url.startswith("//"):
                 next_url = "/"
             return redirect(next_url)
-        error = "Wrong password."
+        error = "Wrong username or password."
     return render(request, "news/login.html", {"error": error, "next": request.GET.get("next", "/")})
 
 
 def logout_view(request: HttpRequest) -> HttpResponse:
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
-    request.session.pop(SESSION_KEY, None)
+    logout(request)
     return redirect("news:login")
 
 

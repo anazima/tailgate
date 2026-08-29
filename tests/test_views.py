@@ -91,17 +91,19 @@ def test_download_image_serves_attachment(client, generated, settings, tmp_path)
 
 
 @pytest.mark.django_db
-def test_password_gate(client, settings) -> None:
-    settings.DASHBOARD_PASSWORD = "secret"
-    resp = client.get(reverse("news:dashboard"))
+def test_login_gate(user) -> None:
+    from django.test import Client
+
+    anon = Client()
+    resp = anon.get(reverse("news:dashboard"))
     assert resp.status_code == 302 and resp["Location"].startswith("/login/")
-    resp = client.post(reverse("news:login"), {"password": "nope"})
-    assert b"Wrong password" in resp.content
-    resp = client.post(reverse("news:login"), {"password": "secret", "next": "/hidden/"})
+    resp = anon.post(reverse("news:login"), {"username": "owner", "password": "nope"})
+    assert b"Wrong username or password" in resp.content
+    resp = anon.post(reverse("news:login"), {"username": "owner", "password": "pw", "next": "/hidden/"})
     assert resp.status_code == 302 and resp["Location"] == "/hidden/"
-    assert client.get(reverse("news:dashboard")).status_code == 200
-    client.post(reverse("news:logout"))
-    assert client.get(reverse("news:dashboard")).status_code == 302
+    assert anon.get(reverse("news:dashboard")).status_code == 200
+    anon.post(reverse("news:logout"))
+    assert anon.get(reverse("news:dashboard")).status_code == 302
 
 
 @pytest.mark.django_db
