@@ -99,7 +99,7 @@ WantedBy=multi-user.target
 sudo systemctl enable --now texas-news
 ```
 
-### 4. Pipeline timer (replaces cron) — every hour
+### 4. Pipeline timer (replaces cron) — top of every hour (Qatar time)
 
 `/etc/systemd/system/texas-news-pipeline.service`
 
@@ -121,8 +121,7 @@ ExecStart=/opt/texas-news/app/.venv/bin/python manage.py run_pipeline
 Description=Run the Texas News pipeline every hour
 
 [Timer]
-OnCalendar=hourly
-RandomizedDelaySec=2m
+OnCalendar=Asia/Qatar *-*-* *:00:00
 Persistent=true
 
 [Install]
@@ -138,6 +137,7 @@ journalctl -u texas-news-pipeline -n 50      # logs of the last runs
 Plain cron alternative (as the `texasnews` user):
 
 ```cron
+CRON_TZ=Asia/Qatar
 0 * * * * cd /opt/texas-news/app && .venv/bin/python manage.py run_pipeline >> /var/log/texas-news/pipeline.log 2>&1
 ```
 
@@ -148,8 +148,8 @@ button can never overlap.
 
 ### Local (macOS) hourly run
 
-`launchd` job at `~/Library/LaunchAgents/com.texasnews.pipeline.plist` (only fires while
-the Mac is awake):
+`launchd` job at `~/Library/LaunchAgents/com.texasnews.pipeline.plist` runs at the top of
+every hour in the Mac's local time (only while the Mac is awake; a missed hour runs once on wake):
 
 ```bash
 launchctl load ~/Library/LaunchAgents/com.texasnews.pipeline.plist     # enable
