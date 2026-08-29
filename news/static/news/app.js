@@ -44,8 +44,11 @@
     return fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": csrf }, body: JSON.stringify(body) });
   }
 
+  // Version query: cache-busts CDN copies of the worker (Cloudflare once cached a 404 for /sw.js).
+  const SW_URL = "/sw.js?v=2";
+
   async function currentSubscription() {
-    const reg = await navigator.serviceWorker.register("/sw.js");
+    const reg = await navigator.serviceWorker.register(SW_URL);
     return { reg, sub: await reg.pushManager.getSubscription() };
   }
 
