@@ -124,3 +124,10 @@ def test_notify_top_stories_collapses_many(source, make_story, vapid, monkeypatc
         )
     assert push.notify_top_stories() == 6
     assert sent == ["6 top stories ready (18+)"]
+
+
+@pytest.mark.django_db
+def test_service_worker_is_public() -> None:
+    from django.test import Client
+
+    assert Client().get("/sw.js").status_code == 200

@@ -3,7 +3,8 @@ from collections.abc import Callable
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
 
-EXEMPT_PREFIXES = ("/login/", "/admin/", "/static/", "/media/")
+# /sw.js is public: browsers fetch service workers without user context.
+EXEMPT_PREFIXES = ("/login/", "/admin/", "/static/", "/media/", "/sw.js")
 
 
 class DashboardLoginRequiredMiddleware:
