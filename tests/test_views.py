@@ -84,8 +84,12 @@ def test_hidden_list_and_unhide(client, source, make_story) -> None:
 
 
 @pytest.mark.django_db
-def test_story_detail_and_download_404_without_image(client, generated) -> None:
+def test_story_detail_and_download_404_without_image(client, generated, settings, tmp_path) -> None:
+    settings.MEDIA_ROOT = tmp_path  # never read the real media/ directory
     assert client.get(reverse("news:story_detail", args=[generated.id])).status_code == 200
+    assert client.get(reverse("news:download_image", args=[generated.id])).status_code == 404
+    generated.image_file = ""
+    generated.save()
     assert client.get(reverse("news:download_image", args=[generated.id])).status_code == 404
 
 
