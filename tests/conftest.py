@@ -45,3 +45,9 @@ def client(client, user):
     """Every view test runs logged in; the login test uses `django.test.Client` directly."""
     client.force_login(user)
     return client
+
+
+@pytest.fixture(autouse=True)
+def _isolated_media(settings, tmp_path) -> None:
+    """Tests must never read or delete files in the real media/ directory."""
+    settings.MEDIA_ROOT = tmp_path / "media"
