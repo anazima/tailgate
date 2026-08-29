@@ -11,8 +11,10 @@ def main():
     # Port 8100 is reserved for this project in /Users/Shared/claude-ports/registry.json.
     # Pin bare `runserver` to it so we never drift to Django's default 8000.
     # Applies whatever flags are passed (e.g. --noreload); an explicit addr:port still wins.
-    if len(sys.argv) >= 2 and sys.argv[1] == "runserver" and not any(
-        not a.startswith("-") for a in sys.argv[2:]
+    if (
+        len(sys.argv) >= 2
+        and sys.argv[1] == "runserver"
+        and not any(not a.startswith("-") for a in sys.argv[2:])
     ):
         sys.argv.append("127.0.0.1:8100")
     try:
