@@ -14,13 +14,20 @@ def generated(source, make_story):
         shareability=7,
         post_title="Storms sweep North Texas",
         post_description="Two sentences. via Test Tribune",
+        image_file="stories/1.jpg",
     )
 
 
 @pytest.mark.django_db
 def test_dashboard_defaults_to_generated_and_sorts_by_score(client, source, make_story, generated) -> None:
     make_story(
-        source, "Better", status=StoryStatus.GENERATED, importance=9, shareability=9, post_title="Top story"
+        source,
+        "Better",
+        status=StoryStatus.GENERATED,
+        importance=9,
+        shareability=9,
+        post_title="Top story",
+        image_file="stories/2.jpg",
     )
     make_story(source, "Scored only", status=StoryStatus.SCORED, importance=9, shareability=9)
     resp = client.get(reverse("news:dashboard"))
@@ -33,7 +40,12 @@ def test_dashboard_defaults_to_generated_and_sorts_by_score(client, source, make
 @pytest.mark.django_db
 def test_dashboard_filters(client, source, other_source, make_story, generated) -> None:
     make_story(
-        other_source, "Dallas thing", status=StoryStatus.GENERATED, category="food", post_title="Dallas BBQ"
+        other_source,
+        "Dallas thing",
+        status=StoryStatus.GENERATED,
+        category="food",
+        post_title="Dallas BBQ",
+        image_file="stories/3.jpg",
     )
     body = client.get(reverse("news:dashboard"), {"city": "dallas"}).content.decode()
     assert "Dallas BBQ" in body and "Storms sweep" not in body
