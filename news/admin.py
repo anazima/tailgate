@@ -8,6 +8,11 @@ class SourceAdmin(admin.ModelAdmin):
     list_display = ("name", "city", "is_active", "is_cowboys", "last_fetched_at", "last_error_short")
     list_filter = ("city", "is_active", "is_cowboys")
     search_fields = ("name", "feed_url")
+    readonly_fields = ("last_fetched_at", "last_error")
+    fieldsets = (
+        (None, {"fields": ("name", "feed_url", "homepage_url", "city", "is_cowboys", "is_active")}),
+        ("Fetch status (set by the pipeline)", {"fields": ("last_fetched_at", "last_error")}),
+    )
 
     @admin.display(description="Last error")
     def last_error_short(self, obj: Source) -> str:
