@@ -7,8 +7,8 @@ self.addEventListener("push", (event) => {
     body: data.body || "",
     tag: data.tag || undefined,
     data: { url: data.url || "/" },
-    icon: "/static/news/icon.png",
-    badge: "/static/news/icon.png",
+    icon: "/static/news/icon-192.png",
+    badge: "/static/news/icon-192.png",
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });

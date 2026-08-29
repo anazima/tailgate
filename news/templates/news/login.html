@@ -1,6 +1,13 @@
 <!doctype html>
+{% load static %}
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Log in — Texas News Curator</title><script src="https://cdn.tailwindcss.com"></script></head>
+<title>Log in — Texas News Curator</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'news/favicon-32.png' %}">
+<link rel="shortcut icon" href="{% static 'news/favicon.ico' %}">
+<link rel="apple-touch-icon" href="{% static 'news/apple-touch-icon.png' %}">
+<link rel="manifest" href="{% static 'news/manifest.json' %}">
+<meta name="theme-color" content="#1c1917">
+<script src="https://cdn.tailwindcss.com"></script></head>
 <body class="bg-stone-100 min-h-screen flex items-center justify-center">
 <form method="post" class="bg-white border border-stone-200 rounded-lg p-6 w-80 flex flex-col gap-3">
   {% csrf_token %}
