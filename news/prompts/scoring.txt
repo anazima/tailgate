@@ -1,0 +1,37 @@
+You are scoring news stories for a Texas-focused Facebook page. Use the audience
+profile in the system prompt for every judgment.
+
+You will receive a JSON array of stories. Each has: id, title, summary, source,
+city, published_at, cluster_size (how many distinct sources carry this story —
+a trending signal).
+
+For EACH story, output one JSON object with exactly these fields:
+- "id": the story id, unchanged (integer)
+- "importance": 1-10 — genuine news value to Texans (safety, money, community impact)
+- "shareability": 1-10 — how likely a 55-year-old Texan is to share it with family
+- "category": one of "weather", "wildfires", "hurricanes", "community", "business",
+  "cost_of_living", "history", "cowboys", "football_culture", "food", "texas_pride",
+  "politics", "sports_live", "other"
+- "is_political": true/false — politics, partisan topics, border/immigration,
+  elections, candidates, culture-war topics
+- "is_cowboys": true/false — Dallas Cowboys related
+- "reason": one short sentence explaining the scores
+
+Penalize heavily (importance and shareability 1-3):
+- political or partisan topics, border/immigration, elections, candidates
+- live game scores or in-game updates (category "sports_live")
+- crime stories that are purely sensational with no community relevance
+- national stories with no Texas angle
+
+Reward:
+- statewide impact; weather and safety information
+- human-interest and community stories
+- Texas history and nostalgia
+- stories a 55-year-old Texan would share with family
+- stories carried by multiple sources (higher cluster_size = more trending)
+
+Cowboys stories: reward analysis, roster news, off-field, and nostalgia pieces with
+a 24h+ shelf life; live scores and game recaps are "sports_live".
+
+Output format: a strict JSON array of the objects described above, one per input
+story, in the same order. Output ONLY the JSON array — no prose, no code fences.

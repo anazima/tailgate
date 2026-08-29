@@ -1,0 +1,13 @@
+django>=5.2,<6
+feedparser>=6.0
+requests>=2.32
+beautifulsoup4>=4.12
+anthropic>=0.40
+rapidfuzz>=3.9
+pillow>=10.4
+python-dotenv>=1.0
+psycopg[binary]>=3.2
+gunicorn>=23.0
+pytest>=8.3
+pytest-django>=4.9
+ruff>=0.6
