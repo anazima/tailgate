@@ -10,7 +10,8 @@ Claude API, and turns the best stories into ready-to-post Facebook content
 The owner opens the dashboard once a day, picks stories, copies the text, downloads
 the image, and posts to a Facebook page manually. There is no Facebook posting
 integration and none is planned. This is a hobby tool for one user — keep it simple,
-boring, and reliable. No auth beyond a single shared password or basic auth.
+boring, and reliable. Auth is a single Django user (same login for the dashboard and
+`/admin/`); no roles, no multi-tenant.
 
 ## Target audience (drives all content decisions)
 
@@ -35,11 +36,14 @@ boring, and reliable. No auth beyond a single shared password or basic auth.
 - PostgreSQL 16
 - `feedparser` for RSS, `requests` + `beautifulsoup4` for image extraction
 - `anthropic` official Python SDK for scoring and content generation
+- `pywebpush` for browser push notifications (Web Push API + VAPID)
 - HTMX is allowed for small interactions (mark as posted, refresh). No other JS
   framework. Vanilla JS for copy-to-clipboard.
 - Tailwind via CDN is fine for styling. Do not add a Node build step.
-- Scheduling: Django management commands run by cron / systemd timer on the VPS.
-  Do not add Celery/Redis.
+- Scheduling: Django management commands run by a systemd timer on the VPS and a
+  `launchd` job locally — top of every hour. Do not add Celery/Redis.
+- Dev server port is **8100** (pinned in `manage.py`; reserved in
+  `/Users/Shared/claude-ports/registry.json`). Never use 8000.
 - Deployment target: single Linux VPS (Hostinger KVM), gunicorn + nginx.
 - Config via environment variables (`python-dotenv` in dev). Never commit secrets.
 
@@ -60,18 +64,25 @@ texas-news-curator/
 │   ├── urls.py
 │   ├── templates/news/
 │   ├── static/news/
+│   ├── middleware.py       # login-required gate for the whole dashboard
 │   ├── services/
 │   │   ├── feeds.py        # RSS fetch + dedupe
 │   │   ├── images.py       # og:image extraction + download
+│   │   ├── claude.py       # API client, prompt loading, defensive JSON parsing
 │   │   ├── scoring.py      # Claude scoring pass
-│   │   └── generation.py   # Claude post-text generation
+│   │   ├── generation.py   # Claude post-text generation
+│   │   ├── push.py         # browser push: notify() + notify_top_stories()
+│   │   └── cleanup.py      # 30-day retention purge
 │   ├── prompts/            # prompt text files, one per task
 │   └── management/commands/
 │       ├── fetch_feeds.py
 │       ├── score_stories.py
 │       ├── generate_content.py
-│       └── run_pipeline.py # runs the three above in order
+│       ├── run_pipeline.py # fetch → cluster → score → generate → notify → cleanup
+│       ├── cleanup_old.py
+│       └── generate_vapid_keys.py
 ├── media/                  # downloaded images (gitignored)
+├── logs/                   # local launchd pipeline log (gitignored)
 └── tests/
 ```
 
@@ -93,7 +104,11 @@ texas-news-curator/
   scored_at
 - Generated fields (nullable until generated): post_title, post_description,
   reel_script (optional, for a separate reel workflow), generated_at
-- posted_at, skipped_at
+- posted_at, skipped_at, notified_at (push sent once per story)
+
+**PushSubscription**
+- endpoint (unique), p256dh, auth, user_agent, created_at, last_error — one row per
+  browser that opted in. Dead endpoints (404/410) are deleted automatically.
 
 **PipelineRun** (for visibility on the dashboard)
 - started_at, finished_at, command, stories_fetched, stories_scored,
@@ -117,10 +132,18 @@ texas-news-curator/
    `(importance + shareability) >= threshold` (default 12, env-configurable), fetch
    the article page, extract the main image, download it to media/, then ask Claude
    for post_title and post_description. → `generated`.
-5. **run_pipeline** — runs 1–4 in order. Cron every 3 hours.
+5. **notify** — push a browser notification for each newly generated story with an
+   image and `importance + shareability >= PUSH_SCORE_THRESHOLD` (default 18).
+   Each story is notified once (`notified_at`); 6+ at once collapse into one summary.
+6. **cleanup** — delete stories (all statuses), their image files, orphaned files in
+   `media/stories/`, and PipelineRun rows older than `RETENTION_DAYS` (default 30).
+7. **run_pipeline** — runs 1–6 in order, every hour at :00. Skips itself if another
+   run is still in progress (a run unfinished after 45 min counts as crashed). Each
+   step's failure is recorded on the PipelineRun but does not stop the next step.
 
 Idempotent: re-running any step must not create duplicates or re-spend tokens on
-already-processed stories.
+already-processed stories. A missing `ANTHROPIC_API_KEY` must surface as a run error,
+never as a silent "0 scored".
 
 ## Claude API usage
 
@@ -161,25 +184,48 @@ already-processed stories.
 - Download to `media/stories/<story_id>.<ext>`, record width/height with Pillow.
 - Dashboard shows the image full-size in a lightbox and offers a direct download
   link (`Content-Disposition: attachment`). Also show the original image URL.
-- If no image is found, still show the story with a placeholder and a warning badge.
+- If no image is found the story is still generated, but the dashboard hides it by
+  default (Images filter: "With image" / "All"). Push notifications require an image.
+- KXAN / KTSM (Nexstar) return 403 to article fetches, so their stories rarely have
+  images.
 - Do not add any stock-photo fallback, watermarking, or image editing.
 
 ## Dashboard (single page + detail)
 
 - `/` — cards sorted by (importance + shareability) desc, then published_at desc.
-  Default filter: status `generated`. Filters: category, source city, status,
-  date range. Show cluster_size as a "N sources" badge.
+  Default filters: status `generated`, images `with`. Filters: category, source
+  city, status, images, date range. Show cluster_size as a "N sources" badge.
 - Each card: image thumbnail, post_title, post_description, source + city + time,
-  score badges, buttons: **Copy title**, **Copy description**, **Copy both**,
+  a single **total score badge** (e.g. `18/20`; breakdown on hover and on the detail
+  page), buttons: **Copy title**, **Copy description**, **Copy both**,
   **Download image**, **Open article**, **Mark posted**, **Skip**.
 - `/story/<id>/` — full detail including score_reason, reel_script, raw feed data.
 - `/hidden/` — political / live-sports stories that were auto-hidden, with an
   "unhide" button (owner override).
 - `/sources/` — manage sources (Django admin is acceptable for this).
-- Header shows last pipeline run time and a **Run now** button that triggers
-  `run_pipeline` (via subprocess or a lightweight background thread; must not block
-  the request for more than a second).
-- Mobile-friendly: the owner may open this on a phone.
+- Header is a single compact bar on every screen size: last-run status (with error
+  flag) on the left, **Run now** + a round burger button on the right. The burger
+  opens a dropdown: Dashboard, Hidden, Sources, Admin, Enable/Disable notifications,
+  Send test notification, Log out. No page title.
+- **Run now** spawns `run_pipeline` as a detached subprocess and must not block the
+  request; the header polls `/pipeline-status/` every 8 s while a run is active.
+- Mobile-friendly: the owner may open this on a phone. Filters collapse behind a
+  "Filters" toggle below `sm`.
+- `/login/` — username + password (Django auth). Everything except `/login/`,
+  `/admin/`, `/static/`, `/media/` requires login (middleware).
+- Favicon / touch icon / web manifest use the red "TN" app icon in `news/static/news/`.
+
+## Browser push notifications
+
+- Standard Web Push (service worker at `/sw.js`, served from the site root by a view).
+  VAPID keys in env (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_CLAIMS_EMAIL`);
+  `python manage.py generate_vapid_keys` prints a fresh pair.
+- `news.services.push.notify(title, body, url, tag)` sends to every subscription and
+  never raises. `notify_top_stories()` is the pipeline step described above.
+- Endpoints: `POST /push/subscribe/`, `POST /push/unsubscribe/`, `POST /push/test/`.
+  The test button first shows a *local* notification from the browser, then a real
+  server push, so OS-permission problems can be told apart from delivery problems.
+- Needs HTTPS in production (localhost exempt). iPhone: only after Add to Home Screen.
 
 ## Sources (seed data)
 
@@ -205,18 +251,35 @@ Verify each feed URL actually parses before committing the fixture.
 - Every management command prints a one-line summary and writes a PipelineRun row.
 - Log with the standard `logging` module; no print() outside commands.
 - Tests: `pytest` + `pytest-django`. Cover URL normalization, dedupe clustering,
-  JSON parsing of Claude responses (with fixture responses), and og:image extraction
-  (with saved HTML fixtures). Do not call the real Claude API in tests.
-- Commit after each milestone below.
+  JSON parsing of Claude responses (with fixture responses), og:image extraction
+  (with saved HTML fixtures), views, push, and cleanup. Do not call the real Claude
+  API or the real push service in tests.
+- `tests/conftest.py` has autouse fixtures that point `MEDIA_ROOT` at a temp dir and
+  log the test client in. **Never remove the MEDIA_ROOT isolation** — a test once
+  ran the cleanup step against the real `media/` folder and deleted every image.
+- Prompt files are substituted with `str.replace` on `{story_json}` / `{reel_field}`,
+  not `str.format`, so prompt text may contain literal braces.
+- Commit after each milestone or feature; run `pytest` and `ruff` before committing.
 
-## Milestones (build in this order)
+## Status
 
-1. Project skeleton, settings, Postgres, models, admin, seed sources, `fetch_feeds`.
-2. Dedupe/cluster + `score_stories` with prompt file + JSON parsing + tests.
-3. Image extraction/download + `generate_content`.
-4. Dashboard with filters, copy buttons, download, mark posted/skip, hidden view.
-5. `run_pipeline`, Run-now button, PipelineRun display, cron instructions in README.
-6. Deployment notes: gunicorn, nginx, systemd timer, `.env`, media serving.
+All original milestones are built and committed (skeleton, feeds, clustering,
+scoring, images, generation, dashboard, run_pipeline / Run now, deployment notes),
+plus: Django-user login, hourly schedule (launchd locally, systemd on the VPS),
+30-day retention, browser push for 18+ stories, TN favicon/manifest.
+
+Not yet done:
+- Deploy to the Hostinger VPS (README §Deployment). Push notifications on phones
+  need the HTTPS deployment.
+- Dallas Morning News / WFAA / Star-Telegram produce no generated stories so far —
+  check their feeds' `last_error` in admin.
+- ~8 generated descriptions run slightly over 300 chars; no hard trim yet.
+
+## Runtime settings (env, see `.env.example`)
+
+`SCORING_MODEL`, `GENERATION_MODEL`, `GENERATION_THRESHOLD` (12), `GENERATE_REEL_SCRIPT`,
+`PUSH_SCORE_THRESHOLD` (18), `RETENTION_DAYS` (30), `VAPID_*`, `DB_ENGINE`
+(`sqlite` dev / `postgres` VPS), `ANTHROPIC_API_KEY`.
 
 ## Out of scope (do not build unless asked)
 
