@@ -113,3 +113,21 @@ class PipelineRun(models.Model):
 
     def __str__(self) -> str:
         return f"{self.command} @ {self.started_at:%Y-%m-%d %H:%M}"
+
+
+class PushSubscription(models.Model):
+    """A browser that opted in to push notifications (Web Push API)."""
+
+    endpoint = models.URLField(max_length=1000, unique=True)
+    p256dh = models.CharField(max_length=200)
+    auth = models.CharField(max_length=100)
+    user_agent = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_error = models.TextField(blank=True)
+
+    def __str__(self) -> str:
+        return self.endpoint[:60]
+
+    @property
+    def subscription_info(self) -> dict:
+        return {"endpoint": self.endpoint, "keys": {"p256dh": self.p256dh, "auth": self.auth}}

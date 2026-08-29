@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import PipelineRun, Source, Story
+from .models import PipelineRun, PushSubscription, Source, Story
 
 
 @admin.register(Source)
@@ -48,3 +48,9 @@ class PipelineRunAdmin(admin.ModelAdmin):
     @admin.display(description="Error")
     def error_short(self, obj: PipelineRun) -> str:
         return (obj.error[:80] + "…") if len(obj.error) > 80 else obj.error
+
+
+@admin.register(PushSubscription)
+class PushSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ("endpoint", "user_agent", "created_at", "last_error")
+    readonly_fields = ("endpoint", "p256dh", "auth", "user_agent", "created_at")

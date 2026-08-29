@@ -33,6 +33,20 @@ pytest
 ruff check . && ruff format --check .
 ```
 
+## Browser push notifications
+
+The dashboard can send push notifications to any browser that opts in (menu →
+**Enable notifications**; **Send test notification** confirms delivery). Setup:
+
+1. `python manage.py generate_vapid_keys` and paste the two lines into `.env`, plus
+   `VAPID_CLAIMS_EMAIL`.
+2. Push requires HTTPS in production (localhost is exempt for development).
+3. iPhone/iPad: Safari only allows push for sites added to the Home Screen
+   (Share → Add to Home Screen), then enable notifications from inside that app.
+
+Send from code with `news.services.push.notify(title, body, url)` — for example at
+the end of a pipeline run.
+
 ## Environment variables
 
 | Variable | Default | Notes |
@@ -47,6 +61,8 @@ ruff check . && ruff format --check .
 | `GENERATION_MODEL` | `claude-sonnet-5` | Sonnet-class |
 | `GENERATION_THRESHOLD` | `12` | importance + shareability needed to generate |
 | `GENERATE_REEL_SCRIPT` | `false` | also produce a ~100-word reel narration |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | empty | browser push keys; `python manage.py generate_vapid_keys` |
+| `VAPID_CLAIMS_EMAIL` | — | contact email sent with each push (required by push services) |
 | `RETENTION_DAYS` | `30` | stories, images and run logs older than this are deleted at the end of each pipeline run |
 
 ## Deployment (single Linux VPS, Ubuntu 24.04)

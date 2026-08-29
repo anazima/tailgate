@@ -1,5 +1,6 @@
 """Dashboard views: card list, detail, hidden list, actions, image download, run-now."""
 
+import json
 import logging
 import subprocess
 import sys
@@ -13,9 +14,10 @@ from django.db.models.functions import Coalesce
 from django.http import FileResponse, Http404, HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
-from news.models import Category, City, PipelineRun, Story, StoryStatus
+from news.models import Category, City, PipelineRun, PushSubscription, Story, StoryStatus
+from news.services import push
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +43,11 @@ def _run_in_progress() -> PipelineRun | None:
 
 
 def _pipeline_context() -> dict:
-    return {"last_run": _last_run(), "run_in_progress": _run_in_progress()}
+    return {
+        "last_run": _last_run(),
+        "run_in_progress": _run_in_progress(),
+        "vapid_public_key": settings.VAPID_PUBLIC_KEY,
+    }
 
 
 def _parse_date(value: str) -> datetime | None:
@@ -184,3 +190,55 @@ def pipeline_status(request: HttpRequest, just_started: bool = False) -> HttpRes
     if just_started and context["run_in_progress"] is None:
         context["starting"] = True
     return render(request, "news/_pipeline_status.html", context)
+
+
+# --- Browser push notifications ---
+
+
+@require_GET
+def service_worker(request: HttpRequest) -> HttpResponse:
+    """Serve sw.js from the site root so its scope covers the whole dashboard."""
+    path = Path(__file__).resolve().parent / "static" / "news" / "sw.js"
+    response = HttpResponse(path.read_text(), content_type="application/javascript")
+    response["Service-Worker-Allowed"] = "/"
+    response["Cache-Control"] = "no-cache"
+    return response
+
+
+def _subscription_from_request(request: HttpRequest) -> dict | None:
+    try:
+        data = json.loads(request.body or b"{}")
+        keys = data["keys"]
+        return {"endpoint": data["endpoint"], "p256dh": keys["p256dh"], "auth": keys["auth"]}
+    except (ValueError, KeyError, TypeError):
+        return None
+
+
+@require_POST
+def push_subscribe(request: HttpRequest) -> HttpResponse:
+    info = _subscription_from_request(request)
+    if info is None:
+        return HttpResponse("invalid subscription", status=400)
+    PushSubscription.objects.update_or_create(
+        endpoint=info["endpoint"][:1000],
+        defaults={
+            "p256dh": info["p256dh"],
+            "auth": info["auth"],
+            "user_agent": request.META.get("HTTP_USER_AGENT", "")[:300],
+        },
+    )
+    return HttpResponse(status=204)
+
+
+@require_POST
+def push_unsubscribe(request: HttpRequest) -> HttpResponse:
+    info = _subscription_from_request(request)
+    if info is not None:
+        PushSubscription.objects.filter(endpoint=info["endpoint"]).delete()
+    return HttpResponse(status=204)
+
+
+@require_POST
+def push_test(request: HttpRequest) -> HttpResponse:
+    sent = push.notify("Texas News Curator", "Test notification — push is working.", url="/", tag="test")
+    return HttpResponse(f"Sent to {sent} device{'s' if sent != 1 else ''}.")

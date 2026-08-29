@@ -112,6 +112,11 @@ GENERATION_MODEL = os.environ.get("GENERATION_MODEL", "claude-sonnet-5")
 GENERATION_THRESHOLD = int(os.environ.get("GENERATION_THRESHOLD", "12"))
 GENERATE_REEL_SCRIPT = env_bool("GENERATE_REEL_SCRIPT", False)
 
+# Web push (VAPID). Generate with: python manage.py generate_vapid_keys
+VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
+VAPID_CLAIMS_EMAIL = os.environ.get("VAPID_CLAIMS_EMAIL", "admin@example.com")
+
 # Stories older than this are never ingested.
 FEED_MAX_AGE_HOURS = 72
 

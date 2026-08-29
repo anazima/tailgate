@@ -9,7 +9,8 @@
   <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
   <link rel="stylesheet" href="{% static 'news/app.css' %}">
 </head>
-<body class="bg-stone-100 text-stone-900 min-h-screen" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body class="bg-stone-100 text-stone-900 min-h-screen" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      data-vapid="{{ vapid_public_key }}" data-csrf="{{ csrf_token }}">
   <header class="bg-stone-900 text-stone-100 sticky top-0 z-20">
     <div class="max-w-6xl mx-auto px-4 h-12 flex items-center gap-3 text-sm">
       <span id="pipeline-status" class="truncate">{% include "news/_pipeline_status.html" %}</span>
@@ -31,6 +32,12 @@
             <a href="{% url 'news:hidden' %}" class="px-4 py-2 hover:bg-stone-100">Hidden</a>
             <a href="/admin/news/source/" class="px-4 py-2 hover:bg-stone-100">Sources</a>
             <a href="/admin/" class="px-4 py-2 hover:bg-stone-100">Admin</a>
+            {% if vapid_public_key %}
+            <div class="border-t border-stone-200 mt-1 pt-1">
+              <button type="button" id="push-toggle" class="w-full text-left px-4 py-2 hover:bg-stone-100" data-state="unknown">Notifications…</button>
+              <button type="button" id="push-test" class="w-full text-left px-4 py-2 hover:bg-stone-100 text-stone-500 hidden">Send test notification</button>
+            </div>
+            {% endif %}
             {% if user.is_authenticated %}
             <form method="post" action="{% url 'news:logout' %}" class="border-t border-stone-200 mt-1">{% csrf_token %}
               <button class="w-full text-left px-4 py-2 hover:bg-stone-100 text-stone-500">Log out ({{ user.username }})</button></form>
