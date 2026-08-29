@@ -85,8 +85,14 @@
         action.catch((err) => { console.error(err); showToast("Could not change notifications"); });
       });
       pushTest.addEventListener("click", async () => {
+        // 1) Local notification straight from the browser — proves the OS shows Chrome notifications.
+        try {
+          const { reg } = await currentSubscription();
+          await reg.showNotification("Local test (from browser)", { body: "If you see this, macOS/Chrome notifications are allowed." });
+        } catch (err) { console.error(err); showToast("Local notification failed: " + err.message); return; }
+        // 2) Real push through the server and the push service.
         const res = await fetch("/push/test/", { method: "POST", headers: { "X-CSRFToken": csrf } });
-        showToast(await res.text());
+        showToast("Local shown · server push: " + (await res.text()));
       });
     }
   }
