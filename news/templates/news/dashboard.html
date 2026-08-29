@@ -28,6 +28,12 @@
       {% endfor %}
     </select>
   </label>
+  <label class="flex flex-col gap-1">Images
+    <select name="images" class="border rounded px-2 py-1">
+      <option value="with" {% if filters.images == "with" %}selected{% endif %}>With image</option>
+      <option value="all" {% if filters.images == "all" %}selected{% endif %}>All</option>
+    </select>
+  </label>
   <label class="flex flex-col gap-1">From
     <input type="date" name="date_from" value="{{ filters.date_from }}" class="border rounded px-2 py-1"></label>
   <label class="flex flex-col gap-1">To

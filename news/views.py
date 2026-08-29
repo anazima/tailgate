@@ -59,7 +59,10 @@ def _apply_filters(request: HttpRequest, stories: QuerySet[Story]) -> tuple[Quer
         "city": request.GET.get("city", ""),
         "date_from": request.GET.get("date_from", ""),
         "date_to": request.GET.get("date_to", ""),
+        "images": request.GET.get("images", "with"),
     }
+    if filters["images"] != "all":
+        stories = stories.exclude(image_file="")
     if filters["status"] and filters["status"] != "all":
         stories = stories.filter(status=filters["status"])
     if filters["category"]:

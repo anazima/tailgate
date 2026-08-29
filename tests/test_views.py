@@ -148,3 +148,12 @@ def test_run_pipeline_reports_missing_api_key(monkeypatch, settings) -> None:
     call_command("run_pipeline")
     run = PipelineRun.objects.get(command="run_pipeline")
     assert "ANTHROPIC_API_KEY is not set" in run.error
+
+
+@pytest.mark.django_db
+def test_dashboard_hides_stories_without_image_by_default(client, source, make_story, generated) -> None:
+    make_story(
+        source, "No pic", status=StoryStatus.GENERATED, importance=9, shareability=9, post_title="Imageless"
+    )
+    assert "Imageless" not in client.get(reverse("news:dashboard")).content.decode()
+    assert "Imageless" in client.get(reverse("news:dashboard"), {"images": "all"}).content.decode()
