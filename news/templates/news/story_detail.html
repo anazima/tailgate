@@ -22,17 +22,17 @@
     </section>
     {% endif %}
   </div>
-  <aside class="bg-white border border-stone-200 rounded-lg p-4 text-sm flex flex-col gap-2 break-words">
+  <aside class="bg-white border border-stone-200 rounded-lg p-4 text-sm flex flex-col gap-2 min-w-0 self-start">
     <h2 class="font-semibold">Raw feed data</h2>
-    <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+    <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 [&>dd]:min-w-0 [&>dd]:break-words">
       <dt class="text-stone-500">Title</dt><dd>{{ story.title }}</dd>
-      <dt class="text-stone-500">URL</dt><dd><a href="{{ story.url }}" class="text-blue-700 hover:underline" target="_blank" rel="noopener">{{ story.url }}</a></dd>
+      <dt class="text-stone-500">URL</dt><dd><a href="{{ story.url }}" class="text-blue-700 hover:underline break-all" target="_blank" rel="noopener">{{ story.url }}</a></dd>
       <dt class="text-stone-500">Source</dt><dd>{{ story.source.name }} ({{ story.source.get_city_display }})</dd>
       <dt class="text-stone-500">Published</dt><dd>{{ story.published_at }}</dd>
       <dt class="text-stone-500">Fetched</dt><dd>{{ story.fetched_at }}</dd>
       <dt class="text-stone-500">Status</dt><dd>{{ story.get_status_display }}</dd>
-      <dt class="text-stone-500">Cluster</dt><dd>{{ story.cluster_size }} source{{ story.cluster_size|pluralize }} · <code class="text-xs">{{ story.cluster_key }}</code></dd>
-      {% if story.image_url %}<dt class="text-stone-500">Image URL</dt><dd><a href="{{ story.image_url }}" class="text-blue-700 hover:underline" target="_blank" rel="noopener">{{ story.image_url }}</a>
+      <dt class="text-stone-500">Cluster</dt><dd>{{ story.cluster_size }} source{{ story.cluster_size|pluralize }} · <code class="text-xs break-all">{{ story.cluster_key }}</code></dd>
+      {% if story.image_url %}<dt class="text-stone-500 whitespace-nowrap">Image</dt><dd><a href="{{ story.image_url }}" class="text-blue-700 hover:underline break-all" target="_blank" rel="noopener">{{ story.image_url }}</a>
         {% if story.image_width %}<br>{{ story.image_width }}×{{ story.image_height }}{% endif %}</dd>{% endif %}
       {% if story.generated_at %}<dt class="text-stone-500">Generated</dt><dd>{{ story.generated_at }}</dd>{% endif %}
       {% if story.posted_at %}<dt class="text-stone-500">Posted</dt><dd>{{ story.posted_at }}</dd>{% endif %}

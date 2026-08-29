@@ -79,3 +79,10 @@ def test_compute_clusters_is_idempotent(source, other_source, make_story) -> Non
     first = compute_clusters()
     second = compute_clusters()
     assert first == second == 1
+
+
+def test_entry_summary_strips_tags_and_unescapes_entities() -> None:
+    from news.services.feeds import _entry_summary
+
+    entry = {"summary": "<p>Texas A&amp;M &amp; friends &#8212; <b>bold</b></p>"}
+    assert _entry_summary(entry) == "Texas A&M & friends — bold"

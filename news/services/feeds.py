@@ -1,6 +1,7 @@
 """RSS fetching, URL normalization, and title-based dedupe/clustering."""
 
 import calendar
+import html
 import logging
 import re
 import socket
@@ -116,7 +117,7 @@ def _entry_published(entry: feedparser.FeedParserDict) -> datetime | None:
 def _entry_summary(entry: feedparser.FeedParserDict) -> str:
     summary = entry.get("summary", "") or ""
     # Feed summaries are often HTML; strip tags crudely (full parsing not needed).
-    text = re.sub(r"<[^>]+>", " ", summary)
+    text = html.unescape(re.sub(r"<[^>]+>", " ", summary))
     return re.sub(r"\s+", " ", text).strip()[:2000]
 
 
