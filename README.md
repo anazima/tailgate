@@ -20,7 +20,7 @@ Run the pipeline by hand:
 
 ```bash
 python manage.py fetch_feeds        # RSS → Story rows + clustering
-python manage.py score_stories      # Claude scoring (Haiku), hides politics / live sports
+python manage.py score_stories      # stage 1 triage (Haiku) then stage 2 deep read (Sonnet)
 python manage.py generate_content   # image + post text (Sonnet) for stories ≥ threshold
 python manage.py run_pipeline       # all of the above, in order, then purge old data
 python manage.py cleanup_old        # just the purge (stories/images/runs older than RETENTION_DAYS)
@@ -59,8 +59,15 @@ story once). Six or more at once collapse into a single summary notification.
 | `DB_ENGINE` | `sqlite` | `postgres` on the VPS |
 | `POSTGRES_DB/USER/PASSWORD/HOST/PORT` | — | used when `DB_ENGINE=postgres` |
 | `ANTHROPIC_API_KEY` | — | required for scoring/generation |
-| `SCORING_MODEL` | `claude-haiku-4-5` | Haiku-class |
+| `SCORING_MODEL` / `TRIAGE_MODEL` | `claude-haiku-4-5` | stage 1 triage and stage 3 ranking |
+| `DEEP_READ_MODEL` | `claude-sonnet-5` | stage 2: reads the article and does the real scoring |
 | `GENERATION_MODEL` | `claude-sonnet-5` | Sonnet-class |
+| `ARTICLE_MAX_WORDS` | `500` | words of article text sent to the deep read; the text is never stored |
+| `ARTICLE_FETCH_WORKERS` | `8` | concurrent article fetches |
+| `DEEP_READ_BATCH_SIZE` | `6` | stories per deep-read request |
+| `DEEP_READ_MAX_PER_RUN` | `15` | caps what one hourly run can spend on a busy news day |
+| `DEEP_READ_MAX_AGE_HOURS` | `48` | older triaged stories are past their shelf life and never retried |
+| `RANK_WINDOW_HOURS` | `24` | window stage 3 ranks stories against each other over |
 | `GENERATION_THRESHOLD` | `12` | importance + shareability needed to generate |
 | `GENERATE_REEL_SCRIPT` | `false` | also produce a ~100-word reel narration |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | empty | browser push keys; `python manage.py generate_vapid_keys` |

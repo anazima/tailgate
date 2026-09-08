@@ -71,16 +71,19 @@ texas-news-curator/
 │   │   ├── feeds.py        # RSS fetch + dedupe
 │   │   ├── images.py       # og:image extraction + download
 │   │   ├── claude.py       # API client, prompt loading, defensive JSON parsing
-│   │   ├── scoring.py      # Claude scoring pass
+│   │   ├── triage.py       # stage 1: headline keep/discard
+│   │   ├── article.py      # article fetch + trafilatura extraction, 500-word cap
+│   │   ├── analysis.py     # stage 2: six-dimension deep read + rollup
+│   │   ├── ranking.py      # stage 3: relative ranking
 │   │   ├── generation.py   # Claude post-text generation
 │   │   ├── push.py         # browser push: notify() + notify_top_stories()
 │   │   └── cleanup.py      # 30-day retention purge
 │   ├── prompts/            # prompt text files, one per task
 │   └── management/commands/
 │       ├── fetch_feeds.py
-│       ├── score_stories.py
+│       ├── score_stories.py  # triage + deep read
 │       ├── generate_content.py
-│       ├── run_pipeline.py # fetch → cluster → score → generate → notify → cleanup
+│       ├── run_pipeline.py # fetch → cluster → triage → deep read → rank → generate → notify → cleanup
 │       ├── cleanup_old.py
 │       └── generate_vapid_keys.py
 ├── deploy/                 # gunicorn/supervisor/nginx/systemd configs + pull-deploy.sh
@@ -100,11 +103,19 @@ texas-news-curator/
   fetched_at
 - image_url, image_file (local path under media/), image_width, image_height
 - cluster_key (see dedupe) and cluster_size (how many sources carry this story)
-- status enum: `new` → `scored` → `generated` → `posted` | `skipped` | `hidden`
-- Scoring fields (nullable until scored): importance (1–10), shareability (1–10),
+- status enum: `new` → `triaged` → `scored` → `generated` → `posted` | `skipped` | `hidden`
+- Triage fields (stage 1, headline only): triage_score (1–5), triage_reason, triaged_at,
   category (enum matching the good categories above + `politics` + `sports_live` +
-  `other`), is_political (bool), is_cowboys (bool), score_reason (short text),
-  scored_at
+  `other`), is_political (bool), is_cowboys (bool)
+- Deep-read fields (stage 2, from the article): six dimensions each 1–5 — scale,
+  consequence, proximity, share_trigger, shelf_life, novelty — plus dimension_notes
+  (JSON, one justification per dimension quoting the article), key_facts (JSON list of
+  3–5 facts), read_confidence (`full` / `partial` / `headline_only`), article_words,
+  score_reason, analysed_at, scored_at
+- importance (1–10) and shareability (1–10) are **derived** from the six dimensions by
+  `analysis.rollup()`. They are not scored directly. Everything downstream — the `/20`
+  badge, GENERATION_THRESHOLD, PUSH_SCORE_THRESHOLD, sorting, push — reads these two.
+- Ranking + feedback: daily_rank, ranked_at, performance (`well` / `poorly`), performance_at
 - Generated fields (nullable until generated): post_title, post_description,
   reel_script (optional, for a separate reel workflow), generated_at
 - posted_at, skipped_at, notified_at (push sent once per story)
@@ -125,12 +136,26 @@ texas-news-curator/
 2. **dedupe / cluster** — after fetching, compute `cluster_key` by normalizing the
    title (lowercase, strip punctuation/stopwords) and grouping by fuzzy similarity
    (rapidfuzz, threshold ~85). `cluster_size` = number of distinct sources in the
-   cluster. This is the trending signal — free, no external API.
-3. **score_stories** — batch all `new` stories (up to ~40 per request) to Claude.
-   Send only headline + feed summary + source + published time + cluster_size.
-   Ask for JSON: importance, shareability, category, is_political, is_cowboys,
-   reason. Set `is_political=true` stories to status `hidden`. Set live sports /
-   match-result stories to `hidden`. Everything else → `scored`.
+   cluster. **This is NOT an importance signal** — it measures wire-service pickup, so an
+   AP story appears everywhere while a real single-source scoop looks like nothing. It is
+   passed to the prompts as context only, and used by triage to spot duplicates.
+3. **triage** (stage 1, Haiku) — batch all `new` stories (up to 40 per request).
+   Headline + feed summary only. Its job is to DISCARD, not to rank: politics, live
+   sports, national stories with no Texas angle, purely sensational crime, and obvious
+   duplicate coverage of the same event. Discards → `hidden` (with triage_reason, so
+   `/hidden/` explains itself); keeps → `triaged`. Owns category, is_political,
+   is_cowboys.
+3b. **deep read** (stage 2, Sonnet) — for `triaged` stories, fetch the article, extract
+   clean text with trafilatura, cut to `ARTICLE_MAX_WORDS` (500) and score the six
+   dimensions with a justification each plus 3–5 key_facts. read_confidence is derived
+   in code from the extracted word count, never asked of the model. Rolls up to
+   importance/shareability → `scored`. Bounded by DEEP_READ_MAX_PER_RUN and
+   DEEP_READ_MAX_AGE_HOURS so an unusual news day cannot run away and a story whose
+   fetch keeps failing is not retried hourly for 30 days.
+3c. **rank** (stage 3, Haiku) — order the last RANK_WINDOW_HOURS of `scored` stories
+   against each other, writing daily_rank. Models calibrate badly in absolute terms, so
+   a fixed threshold gives nothing on a quiet day and a flood on a busy one. Posted and
+   skipped stories are excluded so the board stops moving once the owner has acted.
 4. **generate_content** — for stories with status `scored` and
    `(importance + shareability) >= threshold` (default 12, env-configurable), fetch
    the article page, extract the main image, download it to media/, then ask Claude
@@ -140,7 +165,7 @@ texas-news-curator/
    Each story is notified once (`notified_at`); 6+ at once collapse into one summary.
 6. **cleanup** — delete stories (all statuses), their image files, orphaned files in
    `media/stories/`, and PipelineRun rows older than `RETENTION_DAYS` (default 30).
-7. **run_pipeline** — runs 1–6 in order, every hour at :00. Skips itself if another
+7. **run_pipeline** — runs all of the above in order, every hour at :00. Skips itself if another
    run is still in progress (a run unfinished after 45 min counts as crashed). Each
    step's failure is recorded on the PipelineRun but does not stop the next step.
 
@@ -152,8 +177,8 @@ never as a silent "0 scored".
 
 - Use the `anthropic` SDK. API key from `ANTHROPIC_API_KEY` env var.
 - Model IDs live in env vars with sane defaults so they can be swapped without code
-  changes: `SCORING_MODEL` (default a Haiku-class model) and `GENERATION_MODEL`
-  (default a Sonnet-class model). Before hardcoding a default, check the current
+  changes: `TRIAGE_MODEL` (default a Haiku-class model, also used for ranking),
+  `DEEP_READ_MODEL` and `GENERATION_MODEL` (both default a Sonnet-class model). Before hardcoding a default, check the current
   model list at https://docs.claude.com/en/docs/about-claude/models/overview.
 - Always request JSON output and parse defensively (strip code fences, validate
   fields, fall back gracefully). Log raw responses on parse failure.
@@ -161,16 +186,30 @@ never as a silent "0 scored".
   never inline long prompts in Python.
 - Use the audience section of this file verbatim as the system prompt context for
   both scoring and generation.
-- Keep token spend tiny: scoring in batches, generation only above threshold,
-  never send full article bodies (headline + summary + first ~500 chars max).
+- Keep token spend tiny: triage in batches of 40 on the cheap model, deep read only on
+  triage survivors and capped per run, generation only above threshold.
+- **Never send full article bodies.** The deep read sends at most `ARTICLE_MAX_WORDS`
+  (500 words) of extracted text — news is inverted-pyramid, so the first 500 words carry
+  the substance. Everything else sends headline + summary only.
+- **Article text is never stored.** What persists is key_facts, the justifications and a
+  word count. This is what keeps "no full-article archiving" true.
 
-### Scoring prompt requirements
-- Output strict JSON array, one object per input story id.
-- Explicitly penalize: political/partisan topics, border/immigration, elections,
-  live game scores, crime that is purely sensational, national stories with no
-  Texas angle.
-- Reward: statewide impact, weather/safety, human-interest, nostalgia, stories that
-  a 55-year-old Texan would share with family, stories carried by multiple sources.
+### Triage prompt requirements (stage 1)
+- Output strict JSON array, one object per input story id: keep, triage_score (1–5),
+  category, is_political, is_cowboys, reason.
+- Discard: political/partisan topics, border/immigration, elections, candidates,
+  culture-war, live game scores, purely sensational crime, national stories with no
+  Texas angle, and duplicate coverage of an event already kept.
+- `cluster_size` is passed as context only, and the prompt says so explicitly: it
+  measures wire-service pickup, not importance, and must not be scored on.
+- Borderline stories survive to stage 2. Triage is a filter, not an editor.
+
+### Deep-read prompt requirements (stage 2)
+- Six dimensions, each 1–5 against anchors written into the prompt — never an
+  unanchored scale. Each needs a justification quoting the article.
+- Reward: statewide impact, weather/safety, human-interest, nostalgia, cost of living,
+  stories a 55-year-old Texan would share with family.
+- read_confidence is stated to the model as a measured fact, not requested from it.
 
 ### Generation prompt requirements
 - `post_title`: max 90 characters, plain, no clickbait, no emojis, no ALL CAPS.
@@ -271,14 +310,30 @@ scoring, images, generation, dashboard, run_pipeline / Run now, deployment notes
 plus: Django-user login, hourly schedule (launchd locally, systemd on the VPS),
 30-day retention, browser push for 18+ stories, TN favicon/manifest.
 
+The single-stage scorer was replaced by the three-stage cascade described under
+Pipeline: triage → deep read → rank. Stories scored before that change keep their old
+importance/shareability and simply show no dimension breakdown; the templates gate on
+`scored_at` and `dimension_rows`, so they render as before and the 30-day purge clears
+them out on its own. There is deliberately no backfill — re-reading hundreds of stories
+that are past their shelf life would cost real money for no benefit.
+
 Not yet done:
+- The rollup weights and the 1–5 anchors are calibrated by reasoning, not by observed
+  results. Watch the first few days: if too much or too little clears
+  GENERATION_THRESHOLD, the weights in `analysis.py` are the dial, not the threshold.
+- No worked examples in the deep-read prompt yet. Once ~30–50 stories carry a
+  `performance` verdict, feeding the best and worst back into the prompt is what turns
+  this from Claude's generic opinion into a ranker tuned to this page.
 - Dallas Morning News / WFAA / Star-Telegram produce no generated stories so far —
   check their feeds' `last_error` in admin.
 - ~8 generated descriptions run slightly over 300 chars; no hard trim yet.
 
 ## Runtime settings (env, see `.env.example`)
 
-`SCORING_MODEL`, `GENERATION_MODEL`, `GENERATION_THRESHOLD` (12), `GENERATE_REEL_SCRIPT`,
+`SCORING_MODEL` / `TRIAGE_MODEL`, `DEEP_READ_MODEL`, `GENERATION_MODEL`,
+`ARTICLE_MAX_WORDS` (500), `ARTICLE_FETCH_WORKERS` (8), `DEEP_READ_BATCH_SIZE` (6),
+`DEEP_READ_MAX_PER_RUN` (15), `DEEP_READ_MAX_AGE_HOURS` (48), `RANK_WINDOW_HOURS` (24),
+`GENERATION_THRESHOLD` (12), `GENERATE_REEL_SCRIPT`,
 `PUSH_SCORE_THRESHOLD` (18), `RETENTION_DAYS` (30), `VAPID_*`, `DB_ENGINE`
 (`sqlite` dev / `postgres` VPS), `ANTHROPIC_API_KEY`.
 
@@ -288,5 +343,6 @@ Not yet done:
 - Video or reel rendering
 - User accounts, multi-tenant, roles
 - Stock image APIs
-- Full-article scraping or archiving
+- Full-article archiving. The deep read fetches an article, sends at most 500 words to
+  Claude and keeps only the extracted facts — the body is never written to the database.
 - Analytics
