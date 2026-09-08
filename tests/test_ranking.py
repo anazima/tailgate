@@ -4,7 +4,7 @@ import pytest
 from django.utils import timezone
 
 from news.models import Story, StoryStatus
-from news.services.ranking import apply_ranks, rankable_stories
+from news.services.ranking import apply_ranks, clear_stale_ranks, rankable_stories
 
 
 @pytest.fixture
@@ -38,13 +38,14 @@ def test_apply_ranks_skips_junk_and_stays_contiguous(scored) -> None:
 
 
 @pytest.mark.django_db
-def test_apply_ranks_leaves_omitted_stories_alone(scored) -> None:
+def test_apply_ranks_clears_the_rank_of_an_omitted_story(scored) -> None:
+    """A number from an earlier pass is not comparable with one from this pass."""
     a, b, c = scored
     c.daily_rank, c.ranked_at = 7, timezone.now() - timedelta(hours=1)
     c.save()
     apply_ranks(scored, [a.id, b.id])
     c.refresh_from_db()
-    assert c.daily_rank == 7
+    assert c.daily_rank is None and c.ranked_at is None
 
 
 @pytest.mark.django_db
@@ -98,3 +99,34 @@ def test_generated_stories_are_ranked_alongside_scored_ones(source, make_story, 
     ranks = [s.daily_rank for s in Story.objects.exclude(daily_rank=None)]
     assert generated.daily_rank is not None
     assert sorted(ranks) == list(range(1, len(ranks) + 1)), "exactly one #1 across the whole board"
+
+
+@pytest.mark.django_db
+def test_clear_stale_ranks_removes_numbers_from_an_earlier_pass(source, make_story, scored) -> None:
+    """Regression: an earlier pass ranked a different set, leaving two #1s on the board."""
+    leftover = make_story(
+        source, "Ranked last hour", status=StoryStatus.GENERATED, importance=9, shareability=9
+    )
+    leftover.daily_rank, leftover.ranked_at = 1, timezone.now()
+    leftover.save()
+    apply_ranks(scored, [s.id for s in scored])
+
+    cleared = clear_stale_ranks([s.id for s in scored])
+    leftover.refresh_from_db()
+
+    assert cleared == 1
+    assert leftover.daily_rank is None
+    ranks = sorted(s.daily_rank for s in Story.objects.exclude(daily_rank=None))
+    assert ranks == list(range(1, len(ranks) + 1)), "exactly one story per rank number"
+
+
+@pytest.mark.django_db
+def test_clear_stale_ranks_keeps_the_record_on_posted_stories(source, make_story, scored) -> None:
+    """Once posted, the rank a story had is history worth keeping on its detail page."""
+    posted = make_story(source, "Posted", status=StoryStatus.POSTED, importance=9, shareability=9)
+    posted.daily_rank, posted.ranked_at = 3, timezone.now()
+    posted.save()
+
+    clear_stale_ranks([s.id for s in scored])
+    posted.refresh_from_db()
+    assert posted.daily_rank == 3

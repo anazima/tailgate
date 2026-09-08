@@ -35,7 +35,10 @@ def apply_ranks(stories: list[Story], ordered_ids: list) -> int:
     """Write 1-based ranks in the order given. Returns the number ranked.
 
     Unknown ids, duplicates and non-integers are skipped so the surviving ranks stay
-    contiguous from 1. Stories the model omitted keep whatever rank they already had.
+    contiguous from 1. A story in `stories` that the model left out has its previous rank
+    cleared rather than keeping it: a rank is only meaningful within the pass that
+    produced it, and a leftover number would sit on the board next to a fresh one
+    carrying the same digit.
     """
     by_id = {s.id: s for s in stories}
     now = timezone.now()
@@ -56,6 +59,11 @@ def apply_ranks(stories: list[Story], ordered_ids: list) -> int:
         story.daily_rank = rank
         story.ranked_at = now
         story.save(update_fields=["daily_rank", "ranked_at"])
+    for story in stories:
+        if story.id not in seen and story.daily_rank is not None:
+            story.daily_rank = None
+            story.ranked_at = None
+            story.save(update_fields=["daily_rank", "ranked_at"])
     return rank
 
 
@@ -96,4 +104,19 @@ def rank_recent() -> int:
     ordered = claude.parse_json(raw)
     if not isinstance(ordered, list):
         raise ValueError("ranking response was not a JSON array")
-    return apply_ranks(stories, ordered)
+    ranked = apply_ranks(stories, ordered)
+    clear_stale_ranks([s.id for s in stories])
+    return ranked
+
+
+def clear_stale_ranks(ranked_ids: list[int]) -> int:
+    """Drop ranks left on rankable stories that this pass did not cover.
+
+    Each pass renumbers from 1, so a number from an earlier pass is not comparable with a
+    number from this one — leaving it in place puts two #1 badges on the dashboard.
+    Posted and skipped stories keep theirs as a record of how they ranked at the time.
+    """
+    stale = (
+        Story.objects.filter(status__in=RANKABLE_STATUSES).exclude(id__in=ranked_ids).exclude(daily_rank=None)
+    )
+    return stale.update(daily_rank=None, ranked_at=None)
