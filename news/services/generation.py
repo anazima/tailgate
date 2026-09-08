@@ -7,7 +7,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from news.models import Story, StoryStatus
-from news.services import claude, images
+from news.services import article, claude, images
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,9 @@ def build_prompt(story: Story, article_text: str) -> str:
         {
             "title": story.title,
             "summary": story.summary[:500],
+            # Facts the deep read already pulled from this article — cleaner than a raw
+            # excerpt, and already checked against the article they came from.
+            "key_facts": story.key_facts or [],
             "article_excerpt": article_text[:500],
             "source_name": story.source.name,
             "city": story.source.city,
@@ -59,10 +62,11 @@ def apply_generation(story: Story, result: dict) -> None:
 
 def generate_for_story(story: Story) -> bool:
     """Fetch article + image, then generate post content. Returns success."""
-    article_text = images.attach_image(story)
+    fetched = article.fetch_one(story.url)
+    images.attach_image(story, html=fetched.html)
     raw = claude.complete(
         model=settings.GENERATION_MODEL,
-        user_content=build_prompt(story, article_text),
+        user_content=build_prompt(story, fetched.text),
         max_tokens=1024,
     )
     result = claude.parse_json(raw)

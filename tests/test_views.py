@@ -80,7 +80,7 @@ def test_hidden_list_and_unhide(client, source, make_story) -> None:
     assert "Election" in client.get(reverse("news:hidden")).content.decode()
     client.post(reverse("news:story_action", args=[story.id]), {"action": "unhide"})
     story.refresh_from_db()
-    assert story.status == StoryStatus.SCORED and story.is_political is False
+    assert story.status == StoryStatus.TRIAGED and story.is_political is False
 
 
 @pytest.mark.django_db
@@ -146,12 +146,14 @@ def test_run_pipeline_command_records_run_and_survives_step_errors(monkeypatch) 
     def boom() -> int:
         raise RuntimeError("no api key")
 
-    monkeypatch.setattr("news.services.scoring.score_new_stories", boom)
+    monkeypatch.setattr("news.services.triage.triage_new_stories", boom)
+    monkeypatch.setattr("news.services.analysis.deep_read_triaged", lambda: 0)
+    monkeypatch.setattr("news.services.ranking.rank_recent", lambda: 0)
     monkeypatch.setattr("news.services.generation.generate_all", lambda: 0)
     call_command("run_pipeline")
     run = PipelineRun.objects.get(command="run_pipeline")
     assert run.stories_fetched == 3 and run.finished_at is not None
-    assert "score: no api key" in run.error
+    assert "triage: no api key" in run.error
 
 
 @pytest.mark.django_db

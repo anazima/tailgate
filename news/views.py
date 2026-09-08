@@ -139,8 +139,8 @@ def story_action(request: HttpRequest, story_id: int) -> HttpResponse:
         story.status, story.posted_at = StoryStatus.POSTED, now
     elif action == "skip":
         story.status, story.skipped_at = StoryStatus.SKIPPED, now
-    else:  # unhide: owner override; back to scored so it can be generated
-        story.status, story.is_political = StoryStatus.SCORED, False
+    else:  # unhide: owner override; back to triaged so stage 2 reads it properly
+        story.status, story.is_political = StoryStatus.TRIAGED, False
     story.save()
     if request.headers.get("HX-Request"):
         # The card is removed from whichever list it was in.

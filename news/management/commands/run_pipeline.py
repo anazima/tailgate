@@ -5,13 +5,13 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from news.models import PipelineRun
-from news.services import cleanup, feeds, generation, push, scoring
+from news.services import analysis, cleanup, feeds, generation, push, ranking, triage
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = "Run the full pipeline: fetch → cluster → score → generate → purge old data."
+    help = "Run the full pipeline: fetch → cluster → triage → deep read → rank → generate → purge."
 
     # A run older than this with no finished_at is treated as crashed, not running.
     STALE_AFTER = timedelta(minutes=45)
@@ -30,7 +30,9 @@ class Command(BaseCommand):
         try:
             run.stories_fetched = self._step("fetch", feeds.fetch_all, errors)
             self._step("cluster", feeds.compute_clusters, errors)
-            run.stories_scored = self._step("score", scoring.score_new_stories, errors)
+            run.stories_triaged = self._step("triage", triage.triage_new_stories, errors)
+            run.stories_scored = self._step("deep read", analysis.deep_read_triaged, errors)
+            run.stories_ranked = self._step("rank", ranking.rank_recent, errors)
             run.stories_generated = self._step("generate", generation.generate_all, errors)
             self._step("notify", push.notify_top_stories, errors)
             self._step("cleanup", cleanup.purge_old_data, errors)
@@ -39,8 +41,9 @@ class Command(BaseCommand):
             run.finished_at = timezone.now()
             run.save()
         self.stdout.write(
-            f"run_pipeline: {run.stories_fetched} fetched, {run.stories_scored} scored, "
-            f"{run.stories_generated} generated" + (f", {len(errors)} step error(s)" if errors else "")
+            f"run_pipeline: {run.stories_fetched} fetched, {run.stories_triaged} triaged, "
+            f"{run.stories_scored} scored, {run.stories_generated} generated"
+            + (f", {len(errors)} step error(s)" if errors else "")
         )
 
     @staticmethod

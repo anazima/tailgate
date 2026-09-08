@@ -47,7 +47,7 @@ def test_attach_image_falls_back_to_feed_image_when_article_blocked(source, make
     calls = []
     monkeypatch.setattr(images, "fetch_article_html", lambda url: (_ for _ in ()).throw(RuntimeError("403")))
     monkeypatch.setattr(images, "download_image", lambda s, url: calls.append(url) or True)
-    assert images.attach_image(story) == ""
+    assert images.attach_image(story) is True
     assert calls == ["https://cdn/feed.jpg"]
 
 
@@ -61,3 +61,17 @@ def test_attach_image_prefers_og_image(source, make_story, monkeypatch) -> None:
     monkeypatch.setattr(images, "download_image", lambda s, url: calls.append(url) or True)
     images.attach_image(story)
     assert calls == ["https://cdn.example.com/og.jpg?w=1200"]
+
+
+@pytest.mark.django_db
+def test_attach_image_uses_prefetched_html_without_fetching_again(source, make_story, monkeypatch) -> None:
+    """The deep read already fetched the page; generation must not request it a second time."""
+    from news.services import images
+
+    story = make_story(source, "Prefetched")
+    fetches: list[str] = []
+    monkeypatch.setattr(images, "fetch_article_html", lambda url: fetches.append(url) or "")
+    monkeypatch.setattr(images, "download_image", lambda s, url: True)
+
+    assert images.attach_image(story, html=load("article_og.html")) is True
+    assert fetches == []

@@ -1,6 +1,10 @@
 Write Facebook post content for the news story below, for the audience described in
 the system prompt.
 
+The story's "key_facts" were pulled from the article by an earlier pass and checked
+against it. Prefer them over "article_excerpt" when the two differ, and never state
+anything that appears in neither.
+
 Output a single JSON object with these fields:
 - "post_title": max 90 characters. Plain and factual. No clickbait, no emojis,
   no ALL CAPS, no exclamation marks.

@@ -1,4 +1,8 @@
+from datetime import timedelta
+
+from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class City(models.TextChoices):
@@ -167,6 +171,13 @@ class Story(models.Model):
     @property
     def total_score(self) -> int:
         return (self.importance or 0) + (self.shareability or 0)
+
+    @property
+    def rank_is_fresh(self) -> bool:
+        """Ranks go stale as the window slides; only fresh ones are worth showing."""
+        if self.ranked_at is None:
+            return False
+        return self.ranked_at >= timezone.now() - timedelta(hours=settings.RANK_WINDOW_HOURS)
 
     @property
     def dimension_rows(self) -> list[tuple[str, int, str]]:
