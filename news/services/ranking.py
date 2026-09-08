@@ -59,15 +59,22 @@ def apply_ranks(stories: list[Story], ordered_ids: list) -> int:
     return rank
 
 
+# Everything the owner can still act on. Ranking only `scored` stories would be a bug:
+# generation moves a story to `generated`, it would drop out of the ranking while keeping
+# the number it had, and every later run would start counting from 1 again — leaving
+# several cards on the dashboard all claiming to be #1.
+RANKABLE_STATUSES = (StoryStatus.SCORED, StoryStatus.GENERATED)
+
+
 def rankable_stories() -> list[Story]:
-    """Scored, unposted stories inside the ranking window, best-scoring first.
+    """Unposted stories inside the ranking window, best-scoring first.
 
     Posted and skipped stories are excluded on purpose: once the owner has acted on a
     story, it should not keep reshuffling the board underneath them.
     """
     cutoff = timezone.now() - timedelta(hours=settings.RANK_WINDOW_HOURS)
     return list(
-        Story.objects.filter(status=StoryStatus.SCORED, published_at__gte=cutoff)
+        Story.objects.filter(status__in=RANKABLE_STATUSES, published_at__gte=cutoff)
         .select_related("source")
         .order_by("-importance", "-shareability", "-published_at")[:MAX_RANKED]
     )

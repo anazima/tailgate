@@ -3,7 +3,7 @@ from datetime import timedelta
 import pytest
 from django.utils import timezone
 
-from news.models import StoryStatus
+from news.models import Story, StoryStatus
 from news.services.ranking import apply_ranks, rankable_stories
 
 
@@ -76,3 +76,25 @@ def test_rankable_excludes_stories_the_owner_already_acted_on(source, make_story
     assert set(rankable) == set(scored)
     for excluded in (posted, hidden, stale):
         assert excluded not in rankable
+
+
+@pytest.mark.django_db
+def test_generated_stories_are_ranked_alongside_scored_ones(source, make_story, scored) -> None:
+    """Regression: ranking only `scored` stories left several cards each claiming to be #1.
+
+    Generation moves a story to `generated`, which is what the dashboard shows by default.
+    If ranking skipped that status, a generated story kept its old number while the next
+    run started counting from 1 again.
+    """
+    generated = make_story(
+        source, "Already generated", status=StoryStatus.GENERATED, importance=9, shareability=9
+    )
+
+    rankable = rankable_stories()
+    assert generated in rankable
+
+    apply_ranks(rankable, [s.id for s in rankable])
+    generated.refresh_from_db()
+    ranks = [s.daily_rank for s in Story.objects.exclude(daily_rank=None)]
+    assert generated.daily_rank is not None
+    assert sorted(ranks) == list(range(1, len(ranks) + 1)), "exactly one #1 across the whole board"
