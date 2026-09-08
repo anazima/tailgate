@@ -16,7 +16,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
-from news.models import Category, City, PipelineRun, PushSubscription, Story, StoryStatus
+from news.models import Category, City, Performance, PipelineRun, PushSubscription, Story, StoryStatus
 from news.services import push
 
 logger = logging.getLogger(__name__)
@@ -91,8 +91,12 @@ def _apply_filters(request: HttpRequest, stories: QuerySet[Story]) -> tuple[Quer
 
 def dashboard(request: HttpRequest) -> HttpResponse:
     stories, filters = _apply_filters(request, _ranked())
-    order = ("-total", "-published_at") if filters["sort"] == "score" else ("-published_at", "-total")
-    stories = stories.order_by(*order)[:200]
+    if filters["sort"] == "rank":
+        stories = stories.order_by(F("daily_rank").asc(nulls_last=True), "-total")
+    else:
+        order = ("-total", "-published_at") if filters["sort"] == "score" else ("-published_at", "-total")
+        stories = stories.order_by(*order)
+    stories = stories[:200]
     context = {
         "stories": stories,
         "filters": filters,
@@ -125,7 +129,11 @@ def download_image(request: HttpRequest, story_id: int) -> HttpResponse:
     return FileResponse(path.open("rb"), as_attachment=True, filename=filename)
 
 
-ACTIONS = {"posted", "skip", "unhide"}
+ACTIONS = {"posted", "skip", "unhide", "did_well", "did_poorly"}
+
+# The only calibration signal this tool has: there is no Facebook API, so how a post
+# actually did can only come from the owner saying so.
+FEEDBACK = {"did_well": Performance.WELL, "did_poorly": Performance.POORLY}
 
 
 @require_POST
@@ -135,6 +143,15 @@ def story_action(request: HttpRequest, story_id: int) -> HttpResponse:
     if action not in ACTIONS:
         return HttpResponse("unknown action", status=400)
     now = timezone.now()
+    if action in FEEDBACK:
+        if story.status != StoryStatus.POSTED:
+            return HttpResponse("feedback only applies to posted stories", status=400)
+        story.performance, story.performance_at = FEEDBACK[action], now
+        story.save(update_fields=["performance", "performance_at"])
+        if request.headers.get("HX-Request"):
+            # Unlike the other actions, the card stays on screen — re-render it in place.
+            return render(request, "news/_card.html", {"story": story})
+        return redirect(request.POST.get("next") or "news:dashboard")
     if action == "posted":
         story.status, story.posted_at = StoryStatus.POSTED, now
     elif action == "skip":

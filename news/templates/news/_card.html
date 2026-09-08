@@ -18,7 +18,13 @@
   <div class="p-4 flex flex-col gap-2 grow">
     <div class="flex flex-wrap gap-1 text-xs">
       {% if story.importance %}<span class="bg-stone-900 text-white font-semibold px-2 py-0.5 rounded"
-        title="Importance {{ story.importance }} + Shareability {{ story.shareability }}">{{ story.total_score }}/20</span>{% endif %}
+        title="Importance {{ story.importance }} — scale {{ story.scale }}, consequence {{ story.consequence }}, proximity {{ story.proximity }} · Shareability {{ story.shareability }} — share trigger {{ story.share_trigger }}, shelf life {{ story.shelf_life }}, novelty {{ story.novelty }}">{{ story.total_score }}/20</span>
+      {% elif story.triage_reason %}<span class="bg-stone-200 text-stone-600 px-2 py-0.5 rounded"
+        title="Discarded before it was read">{{ story.triage_reason|truncatechars:60 }}</span>{% endif %}
+      {% if story.daily_rank and story.rank_is_fresh %}<span class="bg-amber-500 text-stone-900 font-semibold px-2 py-0.5 rounded"
+        title="Ranked against the other recent stories">#{{ story.daily_rank }}</span>{% endif %}
+      {% if story.read_confidence == "headline_only" %}<span class="bg-stone-200 text-stone-600 px-2 py-0.5 rounded"
+        title="This site blocked our fetch, so the score comes from the headline alone">Headline only</span>{% endif %}
       {% if story.category %}<span class="bg-stone-100 text-stone-700 px-2 py-0.5 rounded">{{ story.get_category_display }}</span>{% endif %}
       {% if story.is_cowboys %}<span class="bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded">Cowboys</span>{% endif %}
       <span class="ml-auto text-stone-500 uppercase">{{ story.get_status_display }}</span>
@@ -50,7 +56,16 @@
       {% if story.status == "hidden" %}
         <button class="btn-primary" hx-post="{% url 'news:story_action' story.id %}" hx-vals='{"action": "unhide"}'
                 hx-target="closest article" hx-swap="outerHTML">Unhide</button>
-      {% elif story.status != "posted" and story.status != "skipped" %}
+      {% elif story.status == "posted" %}
+        {% if story.performance %}
+          <span class="px-2 py-0.5 rounded {% if story.performance == 'well' %}bg-green-100 text-green-800{% else %}bg-stone-200 text-stone-600{% endif %}">{{ story.get_performance_display }}</span>
+        {% else %}
+          <button class="btn" hx-post="{% url 'news:story_action' story.id %}" hx-vals='{"action": "did_well"}'
+                  hx-target="closest article" hx-swap="outerHTML">Did well</button>
+          <button class="btn" hx-post="{% url 'news:story_action' story.id %}" hx-vals='{"action": "did_poorly"}'
+                  hx-target="closest article" hx-swap="outerHTML">Did poorly</button>
+        {% endif %}
+      {% elif story.status != "skipped" %}
         <button class="btn-primary" hx-post="{% url 'news:story_action' story.id %}" hx-vals='{"action": "posted"}'
                 hx-target="closest article" hx-swap="outerHTML">Mark posted</button>
         <button class="btn" hx-post="{% url 'news:story_action' story.id %}" hx-vals='{"action": "skip"}'

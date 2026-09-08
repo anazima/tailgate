@@ -1,5 +1,6 @@
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from news.models import PipelineRun, StoryStatus
 
@@ -186,3 +187,78 @@ def test_run_pipeline_skips_when_another_run_is_active(monkeypatch) -> None:
     PipelineRun.objects.create(command="run_pipeline")  # unfinished, fresh
     call_command("run_pipeline")
     assert called == [] and PipelineRun.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_feedback_records_the_owners_verdict_and_keeps_the_card(client, source, make_story) -> None:
+    """Unlike posting or skipping, feedback leaves the card on screen, so it must re-render."""
+    story = make_story(source, "Posted story", status=StoryStatus.POSTED, importance=8, shareability=8)
+    response = client.post(
+        reverse("news:story_action", args=[story.id]),
+        {"action": "did_well"},
+        headers={"HX-Request": "true"},
+    )
+    story.refresh_from_db()
+
+    assert response.status_code == 200
+    assert story.performance == "well" and story.performance_at is not None
+    assert b"Posted story" in response.content, "the card must come back, not an empty removal"
+
+
+@pytest.mark.django_db
+def test_feedback_is_rejected_on_a_story_that_was_never_posted(client, source, make_story) -> None:
+    story = make_story(source, "Not posted", status=StoryStatus.GENERATED, importance=8, shareability=8)
+    response = client.post(reverse("news:story_action", args=[story.id]), {"action": "did_poorly"})
+    story.refresh_from_db()
+
+    assert response.status_code == 400
+    assert story.performance == ""
+
+
+@pytest.mark.django_db
+def test_dashboard_can_sort_by_rank(client, source, make_story) -> None:
+    make_story(source, "Unranked", status=StoryStatus.GENERATED, importance=9, shareability=9)
+    top = make_story(
+        source,
+        "Ranked first",
+        status=StoryStatus.GENERATED,
+        importance=5,
+        shareability=5,
+        daily_rank=1,
+        ranked_at=timezone.now(),
+    )
+    response = client.get(reverse("news:dashboard"), {"sort": "rank", "images": "all"})
+    body = response.content.decode()
+
+    assert response.status_code == 200
+    assert body.index("Ranked first") < body.index("Unranked"), "ranked stories sort above unranked"
+    assert str(top.daily_rank) in body
+
+
+@pytest.mark.django_db
+def test_story_detail_shows_the_dimensions_and_key_facts(client, source, make_story) -> None:
+    """The breakdown is what makes a score auditable — the owner can see why it scored."""
+    story = make_story(
+        source,
+        "Hard freeze warning",
+        status=StoryStatus.SCORED,
+        importance=8,
+        shareability=7,
+        scored_at=timezone.now(),
+        scale=4,
+        consequence=5,
+        proximity=5,
+        share_trigger=4,
+        shelf_life=3,
+        novelty=4,
+        dimension_notes={"consequence": '"pipes may burst overnight"'},
+        key_facts=["Lows in the low twenties.", "Four warming centers open."],
+        read_confidence="headline_only",
+        article_words=0,
+    )
+    body = client.get(reverse("news:story_detail", args=[story.id])).content.decode()
+
+    assert "Consequence" in body and "5/5" in body
+    assert "pipes may burst overnight" in body
+    assert "Four warming centers open." in body
+    assert "Headline only" in body

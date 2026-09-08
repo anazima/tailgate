@@ -9,11 +9,35 @@
       <h2 class="font-semibold">Scoring</h2>
       {% if story.scored_at %}
         <p>Importance <strong>{{ story.importance }}</strong> · Shareability <strong>{{ story.shareability }}</strong>
-           · {{ story.get_category_display }}{% if story.is_political %} · <span class="text-red-700">political</span>{% endif %}</p>
+           · {{ story.get_category_display }}{% if story.is_political %} · <span class="text-red-700">political</span>{% endif %}
+           {% if story.daily_rank and story.rank_is_fresh %} · ranked <strong>#{{ story.daily_rank }}</strong>{% endif %}</p>
+        {% if story.dimension_rows %}
+          <dl class="grid grid-cols-[auto_auto_minmax(0,1fr)] gap-x-3 gap-y-1 items-baseline">
+            {% for label, score, note in story.dimension_rows %}
+              <dt class="text-stone-500">{{ label }}</dt>
+              <dd class="font-semibold tabular-nums">{{ score }}/5</dd>
+              <dd class="text-stone-600 min-w-0 break-words">{{ note }}</dd>
+            {% endfor %}
+          </dl>
+        {% endif %}
         <p class="text-stone-700">{{ story.score_reason }}</p>
-        <p class="text-xs text-stone-500">Scored {{ story.scored_at }}</p>
+        <p class="text-xs text-stone-500">
+          Scored {{ story.scored_at }}
+          {% if story.read_confidence %} · {{ story.get_read_confidence_display|lower }}{% if story.article_words %}, {{ story.article_words }} words read{% endif %}{% endif %}
+        </p>
+      {% elif story.triaged_at %}
+        <p class="text-stone-700">{{ story.triage_reason }}</p>
+        <p class="text-xs text-stone-500">Triaged {{ story.triaged_at }} · interest {{ story.triage_score }}/5 · not yet read in full.</p>
       {% else %}<p class="text-stone-500">Not scored yet.</p>{% endif %}
     </section>
+    {% if story.key_facts %}
+    <section class="bg-white border border-stone-200 rounded-lg p-4 text-sm flex flex-col gap-2">
+      <h2 class="font-semibold">Key facts from the article</h2>
+      <ul class="list-disc pl-5 flex flex-col gap-1 text-stone-700">
+        {% for fact in story.key_facts %}<li>{{ fact }}</li>{% endfor %}
+      </ul>
+    </section>
+    {% endif %}
     {% if story.reel_script %}
     <section class="bg-white border border-stone-200 rounded-lg p-4 text-sm flex flex-col gap-2">
       <h2 class="font-semibold">Reel script</h2>
@@ -34,6 +58,9 @@
       <dt class="text-stone-500">Cluster</dt><dd>{{ story.cluster_size }} source{{ story.cluster_size|pluralize }} · <code class="text-xs break-all">{{ story.cluster_key }}</code></dd>
       {% if story.image_url %}<dt class="text-stone-500 whitespace-nowrap">Image</dt><dd><a href="{{ story.image_url }}" class="text-blue-700 hover:underline break-all" target="_blank" rel="noopener">{{ story.image_url }}</a>
         {% if story.image_width %}<br>{{ story.image_width }}×{{ story.image_height }}{% endif %}</dd>{% endif %}
+      {% if story.read_confidence %}<dt class="text-stone-500">Read</dt><dd>{{ story.get_read_confidence_display }}{% if story.article_words %} · {{ story.article_words }} words{% endif %}</dd>{% endif %}
+      {% if story.daily_rank %}<dt class="text-stone-500">Rank</dt><dd>#{{ story.daily_rank }}{% if not story.rank_is_fresh %} <span class="text-stone-500">(stale)</span>{% endif %} · {{ story.ranked_at }}</dd>{% endif %}
+      {% if story.performance %}<dt class="text-stone-500">Result</dt><dd>{{ story.get_performance_display }} · {{ story.performance_at }}</dd>{% endif %}
       {% if story.generated_at %}<dt class="text-stone-500">Generated</dt><dd>{{ story.generated_at }}</dd>{% endif %}
       {% if story.posted_at %}<dt class="text-stone-500">Posted</dt><dd>{{ story.posted_at }}</dd>{% endif %}
       {% if story.skipped_at %}<dt class="text-stone-500">Skipped</dt><dd>{{ story.skipped_at }}</dd>{% endif %}
