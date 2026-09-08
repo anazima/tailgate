@@ -126,6 +126,11 @@ GENERATION_MODEL = os.environ.get("GENERATION_MODEL", "claude-sonnet-5")
 GENERATION_THRESHOLD = int(os.environ.get("GENERATION_THRESHOLD", "12"))
 GENERATE_REEL_SCRIPT = env_bool("GENERATE_REEL_SCRIPT", False)
 
+# Deep-read scoring: how much article text is sent to Claude, and how many pages are
+# fetched at once. The text is used for scoring and then discarded, never stored.
+ARTICLE_MAX_WORDS = int(os.environ.get("ARTICLE_MAX_WORDS", "500"))
+ARTICLE_FETCH_WORKERS = int(os.environ.get("ARTICLE_FETCH_WORKERS", "8"))
+
 # Web push (VAPID). Generate with: python manage.py generate_vapid_keys
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
