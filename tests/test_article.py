@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from news.models import ReadConfidence
 from news.services import article, images
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -28,8 +29,9 @@ def test_extract_default_cap_comes_from_settings(settings) -> None:
     assert len(article.extract_text(load("article_long.html")).split()) == 25
 
 
-def test_extract_falls_back_when_trafilatura_finds_nothing() -> None:
-    """The tiny fixtures are below trafilatura's length heuristics; the old extractor still reads them."""
+def test_extract_falls_back_when_trafilatura_finds_nothing(monkeypatch) -> None:
+    """trafilatura returns None on plenty of real pages; the old extractor still reads them."""
+    monkeypatch.setattr(article.trafilatura, "extract", lambda *a, **k: None)
     assert article.extract_text(load("article_og.html")) == "First paragraph of the story. Second paragraph."
 
 
@@ -37,28 +39,34 @@ def test_extract_of_empty_html_is_empty() -> None:
     assert article.extract_text("") == ""
 
 
-def test_fetch_article_reads_a_full_story(monkeypatch) -> None:
+def test_fetch_one_reads_a_full_story(monkeypatch) -> None:
     monkeypatch.setattr(images, "fetch_article_html", lambda url: load("article_long.html"))
-    text, confidence = article.fetch_article("https://news.example.com/freeze")
-    assert confidence == article.FULL
-    assert "freeze" in text.lower()
+    result = article.fetch_one("https://news.example.com/freeze")
+    assert result.confidence == ReadConfidence.FULL
+    assert result.word_count >= article.FULL_READ_WORDS
+    assert "freeze" in result.text.lower()
+    assert result.html, "html is kept on the dataclass so generation need not fetch again"
 
 
-def test_fetch_article_marks_a_stub_partial(monkeypatch) -> None:
-    monkeypatch.setattr(images, "fetch_article_html", lambda url: load("article_og.html"))
-    text, confidence = article.fetch_article("https://news.example.com/short")
-    assert confidence == article.PARTIAL
-    assert text
+def test_fetch_one_marks_a_stub_partial(monkeypatch) -> None:
+    stub = "<html><body><article>" + "<p>word word word</p>" * 20 + "</article></body></html>"
+    monkeypatch.setattr(images, "fetch_article_html", lambda url: stub)
+    result = article.fetch_one("https://news.example.com/short")
+    assert result.confidence == ReadConfidence.PARTIAL
+    assert article.PARTIAL_READ_WORDS <= result.word_count < article.FULL_READ_WORDS
 
 
-def test_fetch_article_survives_a_403(monkeypatch) -> None:
+def test_fetch_one_survives_a_403(monkeypatch) -> None:
     """WFAA, KXAN and KTSM answer 403 to everything — expected, not a run-ending error."""
 
     def blocked(url: str) -> str:
         raise RuntimeError("403 Client Error")
 
     monkeypatch.setattr(images, "fetch_article_html", blocked)
-    assert article.fetch_article("https://www.kxan.com/story") == ("", article.HEADLINE)
+    result = article.fetch_one("https://www.kxan.com/story")
+    assert result.confidence == ReadConfidence.HEADLINE
+    assert result.word_count == 0
+    assert result.text == "" and result.html == ""
 
 
 def test_fetch_many_isolates_one_bad_host(monkeypatch) -> None:
@@ -69,8 +77,8 @@ def test_fetch_many_isolates_one_bad_host(monkeypatch) -> None:
 
     monkeypatch.setattr(images, "fetch_article_html", maybe)
     results = article.fetch_many(["https://ksat.com/a", "https://kxan.com/b"])
-    assert results["https://ksat.com/a"][1] == article.FULL
-    assert results["https://kxan.com/b"] == ("", article.HEADLINE)
+    assert results["https://ksat.com/a"].confidence == ReadConfidence.FULL
+    assert results["https://kxan.com/b"].confidence == ReadConfidence.HEADLINE
 
 
 def test_fetch_many_dedupes_and_handles_empty(monkeypatch) -> None:

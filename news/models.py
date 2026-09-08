@@ -30,11 +30,27 @@ class Category(models.TextChoices):
 
 class StoryStatus(models.TextChoices):
     NEW = "new", "New"
+    TRIAGED = "triaged", "Triaged"
     SCORED = "scored", "Scored"
     GENERATED = "generated", "Generated"
     POSTED = "posted", "Posted"
     SKIPPED = "skipped", "Skipped"
     HIDDEN = "hidden", "Hidden"
+
+
+class ReadConfidence(models.TextChoices):
+    """How much of the article Claude actually got to read before scoring it."""
+
+    FULL = "full", "Article read"
+    PARTIAL = "partial", "Partial read"
+    HEADLINE = "headline_only", "Headline only"
+
+
+class Performance(models.TextChoices):
+    """How the post actually did once the owner published it."""
+
+    WELL = "well", "Did well"
+    POORLY = "poorly", "Did poorly"
 
 
 class Source(models.Model):
@@ -79,6 +95,50 @@ class Story(models.Model):
     score_reason = models.TextField(blank=True)
     scored_at = models.DateTimeField(null=True, blank=True)
 
+    # Stage 1 triage — headline-level keep/discard, never a ranking.
+    triage_score = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="1-5 rough interest, judged from the headline alone."
+    )
+    triage_reason = models.CharField(max_length=300, blank=True)
+    triaged_at = models.DateTimeField(null=True, blank=True)
+
+    # Stage 2 deep read — six dimensions, each 1-5 against anchors written into the prompt.
+    scale = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="1-5: how many Texans this affects, and where."
+    )
+    consequence = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="1-5: does this change money, safety or plans."
+    )
+    proximity = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="1-5: closeness to the five target cities."
+    )
+    share_trigger = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="1-5: why a 55-year-old sends it to family."
+    )
+    shelf_life = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="1-5: still worth posting in 12 hours."
+    )
+    novelty = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="1-5: genuinely new, not a rehash."
+    )
+    dimension_notes = models.JSONField(
+        default=dict, blank=True, help_text="One justification per dimension, quoting the article."
+    )
+    key_facts = models.JSONField(default=list, blank=True, help_text="3-5 facts extracted from the article.")
+    read_confidence = models.CharField(max_length=13, choices=ReadConfidence.choices, blank=True)
+    article_words = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Words of article text sent to Claude. The text itself is never stored.",
+    )
+    analysed_at = models.DateTimeField(null=True, blank=True)
+
+    # Stage 3 ranking, and the owner's verdict once a story has been posted.
+    daily_rank = models.PositiveSmallIntegerField(null=True, blank=True)
+    ranked_at = models.DateTimeField(null=True, blank=True)
+    performance = models.CharField(max_length=10, choices=Performance.choices, blank=True)
+    performance_at = models.DateTimeField(null=True, blank=True)
+
     post_title = models.CharField(max_length=200, blank=True)
     post_description = models.TextField(blank=True)
     reel_script = models.TextField(blank=True)
@@ -95,9 +155,28 @@ class Story(models.Model):
     def __str__(self) -> str:
         return self.title
 
+    DIMENSIONS = (
+        ("scale", "Scale"),
+        ("consequence", "Consequence"),
+        ("proximity", "Proximity"),
+        ("share_trigger", "Share trigger"),
+        ("shelf_life", "Shelf life"),
+        ("novelty", "Novelty"),
+    )
+
     @property
     def total_score(self) -> int:
         return (self.importance or 0) + (self.shareability or 0)
+
+    @property
+    def dimension_rows(self) -> list[tuple[str, int, str]]:
+        """(label, score, justification) per scored dimension — for the detail page."""
+        notes = self.dimension_notes or {}
+        return [
+            (label, getattr(self, field), notes.get(field, ""))
+            for field, label in self.DIMENSIONS
+            if getattr(self, field) is not None
+        ]
 
 
 class PipelineRun(models.Model):
@@ -105,7 +184,10 @@ class PipelineRun(models.Model):
     finished_at = models.DateTimeField(null=True, blank=True)
     command = models.CharField(max_length=50)
     stories_fetched = models.PositiveIntegerField(default=0)
+    stories_triaged = models.PositiveIntegerField(default=0)
+    # stories_scored keeps its meaning: stories that survived the deep read.
     stories_scored = models.PositiveIntegerField(default=0)
+    stories_ranked = models.PositiveIntegerField(default=0)
     stories_generated = models.PositiveIntegerField(default=0)
     error = models.TextField(blank=True)
 

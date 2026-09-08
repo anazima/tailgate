@@ -28,10 +28,13 @@ class StoryAdmin(admin.ModelAdmin):
         "category",
         "importance",
         "shareability",
+        "read_confidence",
+        "daily_rank",
+        "performance",
         "cluster_size",
         "published_at",
     )
-    list_filter = ("status", "category", "source__city", "source")
+    list_filter = ("status", "category", "read_confidence", "performance", "source__city", "source")
     search_fields = ("title", "url")
     date_hierarchy = "published_at"
     readonly_fields = ("fetched_at",)
@@ -44,7 +47,9 @@ class PipelineRunAdmin(admin.ModelAdmin):
         "started_at",
         "finished_at",
         "stories_fetched",
+        "stories_triaged",
         "stories_scored",
+        "stories_ranked",
         "stories_generated",
         "error_short",
     )
