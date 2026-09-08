@@ -17,14 +17,12 @@
 
   <div class="p-4 flex flex-col gap-2 grow">
     <div class="flex flex-wrap gap-1 text-xs">
-      {% if story.importance %}<span class="bg-stone-900 text-white font-semibold px-2 py-0.5 rounded"
-        title="Importance {{ story.importance }} — scale {{ story.scale }}, consequence {{ story.consequence }}, proximity {{ story.proximity }} · Shareability {{ story.shareability }} — share trigger {{ story.share_trigger }}, shelf life {{ story.shelf_life }}, novelty {{ story.novelty }}">{{ story.total_score }}/20</span>
-      {% elif story.triage_reason %}<span class="bg-stone-200 text-stone-600 px-2 py-0.5 rounded"
+      {% if story.daily_rank and story.rank_is_fresh %}<span class="bg-stone-900 text-white font-semibold px-2 py-0.5 rounded"
+        title="Best of the recent stories, judged against each other. Scale {{ story.scale }}, consequence {{ story.consequence }}, proximity {{ story.proximity }}, share trigger {{ story.share_trigger }}, shelf life {{ story.shelf_life }}, novelty {{ story.novelty }} — each out of 5.">#{{ story.daily_rank }}</span>
+      {% elif story.triage_reason and not story.analysed_at %}<span class="bg-stone-200 text-stone-600 px-2 py-0.5 rounded"
         title="Discarded before it was read">{{ story.triage_reason|truncatechars:60 }}</span>{% endif %}
-      {% if story.daily_rank and story.rank_is_fresh %}<span class="bg-amber-500 text-stone-900 font-semibold px-2 py-0.5 rounded"
-        title="Ranked against the other recent stories">#{{ story.daily_rank }}</span>{% endif %}
       {% if story.read_confidence == "headline_only" %}<span class="bg-stone-200 text-stone-600 px-2 py-0.5 rounded"
-        title="This site blocked our fetch, so the score comes from the headline alone">Headline only</span>{% endif %}
+        title="This site blocked our fetch, so this was judged from the headline alone">Headline only</span>{% endif %}
       {% if story.category %}<span class="bg-stone-100 text-stone-700 px-2 py-0.5 rounded">{{ story.get_category_display }}</span>{% endif %}
       {% if story.is_cowboys %}<span class="bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded">Cowboys</span>{% endif %}
       <span class="ml-auto text-stone-500 uppercase">{{ story.get_status_display }}</span>

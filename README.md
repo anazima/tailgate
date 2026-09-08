@@ -45,7 +45,6 @@ The dashboard can send push notifications to any browser that opts in (menu →
    (Share → Add to Home Screen), then enable notifications from inside that app.
 
 Each pipeline run pushes one notification per newly generated story scoring
-`PUSH_SCORE_THRESHOLD` or higher (default 18/20; only stories with an image, each
 story once). Six or more at once collapse into a single summary notification.
 `news.services.push.notify(title, body, url)` sends anything else you need.
 
@@ -68,11 +67,10 @@ story once). Six or more at once collapse into a single summary notification.
 | `DEEP_READ_MAX_PER_RUN` | `15` | caps what one hourly run can spend on a busy news day |
 | `DEEP_READ_MAX_AGE_HOURS` | `48` | older triaged stories are past their shelf life and never retried |
 | `RANK_WINDOW_HOURS` | `24` | window stage 3 ranks stories against each other over |
-| `GENERATION_THRESHOLD` | `12` | importance + shareability needed to generate |
+| `GENERATION_TOP_N` | `10` | how many of the top-ranked stories get post text written |
 | `GENERATE_REEL_SCRIPT` | `false` | also produce a ~100-word reel narration |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | empty | browser push keys; `python manage.py generate_vapid_keys` |
 | `VAPID_CLAIMS_EMAIL` | — | contact email sent with each push (required by push services) |
-| `PUSH_SCORE_THRESHOLD` | `18` | push a notification for new stories scoring at least this |
 | `RETENTION_DAYS` | `30` | stories, images and run logs older than this are deleted at the end of each pipeline run |
 
 ## Deployment — tailgate.retoph.com (AWS Ubuntu 24.04, aaPanel)

@@ -128,7 +128,9 @@ TRIAGE_MODEL = os.environ.get("TRIAGE_MODEL", SCORING_MODEL)
 DEEP_READ_MODEL = os.environ.get("DEEP_READ_MODEL", "claude-sonnet-5")
 GENERATION_MODEL = os.environ.get("GENERATION_MODEL", "claude-sonnet-5")
 
-GENERATION_THRESHOLD = int(os.environ.get("GENERATION_THRESHOLD", "12"))
+# How many of the top-ranked stories get post text written each run. Replaces the old
+# score threshold: a fixed number every day beats a bar that nothing clears on a quiet one.
+GENERATION_TOP_N = int(os.environ.get("GENERATION_TOP_N", "10"))
 GENERATE_REEL_SCRIPT = env_bool("GENERATE_REEL_SCRIPT", False)
 
 # Deep-read scoring: how much article text is sent to Claude, and how many pages are
@@ -147,8 +149,7 @@ RANK_WINDOW_HOURS = int(os.environ.get("RANK_WINDOW_HOURS", "24"))
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
 VAPID_CLAIMS_EMAIL = os.environ.get("VAPID_CLAIMS_EMAIL", "admin@example.com")
-# Push a notification for newly generated stories whose importance + shareability is at least this.
-PUSH_SCORE_THRESHOLD = int(os.environ.get("PUSH_SCORE_THRESHOLD", "18"))
+
 
 # Stories older than this are never ingested.
 FEED_MAX_AGE_HOURS = 72

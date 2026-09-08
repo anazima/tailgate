@@ -8,9 +8,8 @@
     <section class="bg-white border border-stone-200 rounded-lg p-4 text-sm flex flex-col gap-3">
       <h2 class="font-semibold">Scoring</h2>
       {% if story.scored_at %}
-        <p>Importance <strong>{{ story.importance }}</strong> · Shareability <strong>{{ story.shareability }}</strong>
-           · {{ story.get_category_display }}{% if story.is_political %} · <span class="text-red-700">political</span>{% endif %}
-           {% if story.daily_rank and story.rank_is_fresh %} · ranked <strong>#{{ story.daily_rank }}</strong>{% endif %}</p>
+        <p>{{ story.get_category_display }}{% if story.is_political %} · <span class="text-red-700">political</span>{% endif %}
+           {% if story.daily_rank and story.rank_is_fresh %} · ranked <strong>#{{ story.daily_rank }}</strong> of the recent stories{% endif %}</p>
         {% if story.dimension_rows %}
           <dl class="grid grid-cols-[auto_auto_minmax(0,1fr)] gap-x-3 gap-y-1 items-baseline">
             {% for label, score, note in story.dimension_rows %}

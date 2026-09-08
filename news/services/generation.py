@@ -13,17 +13,19 @@ logger = logging.getLogger(__name__)
 
 
 def eligible_stories() -> list[Story]:
-    """Scored stories at or above the generation threshold, best first."""
+    """The top-ranked scored stories, best first.
+
+    A rank cap rather than a score threshold: it yields the same handful of stories to
+    write every day, where an absolute threshold gave nothing on a quiet day and a flood
+    on a busy one.
+    """
     stories = (
-        Story.objects.filter(status=StoryStatus.SCORED)
-        .filter(importance__isnull=False, shareability__isnull=False)
+        Story.objects.filter(status=StoryStatus.SCORED, daily_rank__lte=settings.GENERATION_TOP_N)
+        .exclude(daily_rank=None)
         .select_related("source")
+        .order_by("daily_rank")
     )
-    return sorted(
-        (s for s in stories if s.total_score >= settings.GENERATION_THRESHOLD),
-        key=lambda s: s.total_score,
-        reverse=True,
-    )
+    return [s for s in stories if s.rank_is_fresh]
 
 
 def build_prompt(story: Story, article_text: str) -> str:

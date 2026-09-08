@@ -10,7 +10,7 @@ from news.services.ranking import apply_ranks, clear_stale_ranks, rankable_stori
 @pytest.fixture
 def scored(source, make_story):
     return [
-        make_story(source, f"Story {i}", status=StoryStatus.SCORED, importance=6, shareability=6)
+        make_story(source, f"Story {i}", status=StoryStatus.SCORED, analysed_at=timezone.now())
         for i in range(3)
     ]
 
@@ -62,14 +62,13 @@ def test_rank_is_fresh_expires_with_the_window(scored, settings) -> None:
 @pytest.mark.django_db
 def test_rankable_excludes_stories_the_owner_already_acted_on(source, make_story, scored) -> None:
     """Once a story is posted or skipped it must stop reshuffling the board."""
-    posted = make_story(source, "Posted", status=StoryStatus.POSTED, importance=9, shareability=9)
-    hidden = make_story(source, "Hidden", status=StoryStatus.HIDDEN, importance=9, shareability=9)
+    posted = make_story(source, "Posted", status=StoryStatus.POSTED, analysed_at=timezone.now())
+    hidden = make_story(source, "Hidden", status=StoryStatus.HIDDEN, analysed_at=timezone.now())
     stale = make_story(
         source,
         "Stale",
         status=StoryStatus.SCORED,
-        importance=9,
-        shareability=9,
+        analysed_at=timezone.now(),
         published_at=timezone.now() - timedelta(hours=72),
     )
 
@@ -88,7 +87,7 @@ def test_generated_stories_are_ranked_alongside_scored_ones(source, make_story, 
     run started counting from 1 again.
     """
     generated = make_story(
-        source, "Already generated", status=StoryStatus.GENERATED, importance=9, shareability=9
+        source, "Already generated", status=StoryStatus.GENERATED, analysed_at=timezone.now()
     )
 
     rankable = rankable_stories()
@@ -105,7 +104,7 @@ def test_generated_stories_are_ranked_alongside_scored_ones(source, make_story, 
 def test_clear_stale_ranks_removes_numbers_from_an_earlier_pass(source, make_story, scored) -> None:
     """Regression: an earlier pass ranked a different set, leaving two #1s on the board."""
     leftover = make_story(
-        source, "Ranked last hour", status=StoryStatus.GENERATED, importance=9, shareability=9
+        source, "Ranked last hour", status=StoryStatus.GENERATED, analysed_at=timezone.now()
     )
     leftover.daily_rank, leftover.ranked_at = 1, timezone.now()
     leftover.save()
@@ -123,7 +122,7 @@ def test_clear_stale_ranks_removes_numbers_from_an_earlier_pass(source, make_sto
 @pytest.mark.django_db
 def test_clear_stale_ranks_keeps_the_record_on_posted_stories(source, make_story, scored) -> None:
     """Once posted, the rank a story had is history worth keeping on its detail page."""
-    posted = make_story(source, "Posted", status=StoryStatus.POSTED, importance=9, shareability=9)
+    posted = make_story(source, "Posted", status=StoryStatus.POSTED, analysed_at=timezone.now())
     posted.daily_rank, posted.ranked_at = 3, timezone.now()
     posted.save()
 

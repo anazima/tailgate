@@ -11,8 +11,6 @@ def generated(source, make_story):
         source,
         "Big storm",
         status=StoryStatus.GENERATED,
-        importance=8,
-        shareability=7,
         post_title="Storms sweep North Texas",
         post_description="Two sentences. via Test Tribune",
         image_file="stories/1.jpg",
@@ -25,12 +23,10 @@ def test_dashboard_defaults_to_generated_and_sorts_by_score(client, source, make
         source,
         "Better",
         status=StoryStatus.GENERATED,
-        importance=9,
-        shareability=9,
         post_title="Top story",
         image_file="stories/2.jpg",
     )
-    make_story(source, "Scored only", status=StoryStatus.SCORED, importance=9, shareability=9)
+    make_story(source, "Scored only", status=StoryStatus.SCORED)
     resp = client.get(reverse("news:dashboard"))
     body = resp.content.decode()
     assert resp.status_code == 200
@@ -75,9 +71,7 @@ def test_story_actions(client, generated) -> None:
 
 @pytest.mark.django_db
 def test_hidden_list_and_unhide(client, source, make_story) -> None:
-    story = make_story(
-        source, "Election", status=StoryStatus.HIDDEN, is_political=True, importance=5, shareability=5
-    )
+    story = make_story(source, "Election", status=StoryStatus.HIDDEN, is_political=True)
     assert "Election" in client.get(reverse("news:hidden")).content.decode()
     client.post(reverse("news:story_action", args=[story.id]), {"action": "unhide"})
     story.refresh_from_db()
@@ -171,9 +165,7 @@ def test_run_pipeline_reports_missing_api_key(monkeypatch, settings) -> None:
 
 @pytest.mark.django_db
 def test_dashboard_hides_stories_without_image_by_default(client, source, make_story, generated) -> None:
-    make_story(
-        source, "No pic", status=StoryStatus.GENERATED, importance=9, shareability=9, post_title="Imageless"
-    )
+    make_story(source, "No pic", status=StoryStatus.GENERATED, post_title="Imageless")
     assert "Imageless" not in client.get(reverse("news:dashboard")).content.decode()
     assert "Imageless" in client.get(reverse("news:dashboard"), {"images": "all"}).content.decode()
 
@@ -192,7 +184,7 @@ def test_run_pipeline_skips_when_another_run_is_active(monkeypatch) -> None:
 @pytest.mark.django_db
 def test_feedback_records_the_owners_verdict_and_keeps_the_card(client, source, make_story) -> None:
     """Unlike posting or skipping, feedback leaves the card on screen, so it must re-render."""
-    story = make_story(source, "Posted story", status=StoryStatus.POSTED, importance=8, shareability=8)
+    story = make_story(source, "Posted story", status=StoryStatus.POSTED)
     response = client.post(
         reverse("news:story_action", args=[story.id]),
         {"action": "did_well"},
@@ -207,7 +199,7 @@ def test_feedback_records_the_owners_verdict_and_keeps_the_card(client, source, 
 
 @pytest.mark.django_db
 def test_feedback_is_rejected_on_a_story_that_was_never_posted(client, source, make_story) -> None:
-    story = make_story(source, "Not posted", status=StoryStatus.GENERATED, importance=8, shareability=8)
+    story = make_story(source, "Not posted", status=StoryStatus.GENERATED)
     response = client.post(reverse("news:story_action", args=[story.id]), {"action": "did_poorly"})
     story.refresh_from_db()
 
@@ -217,13 +209,11 @@ def test_feedback_is_rejected_on_a_story_that_was_never_posted(client, source, m
 
 @pytest.mark.django_db
 def test_dashboard_can_sort_by_rank(client, source, make_story) -> None:
-    make_story(source, "Unranked", status=StoryStatus.GENERATED, importance=9, shareability=9)
+    make_story(source, "Unranked", status=StoryStatus.GENERATED)
     top = make_story(
         source,
         "Ranked first",
         status=StoryStatus.GENERATED,
-        importance=5,
-        shareability=5,
         daily_rank=1,
         ranked_at=timezone.now(),
     )
@@ -242,8 +232,6 @@ def test_story_detail_shows_the_dimensions_and_key_facts(client, source, make_st
         source,
         "Hard freeze warning",
         status=StoryStatus.SCORED,
-        importance=8,
-        shareability=7,
         scored_at=timezone.now(),
         scale=4,
         consequence=5,

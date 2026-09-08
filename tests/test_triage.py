@@ -95,7 +95,6 @@ def test_triage_never_touches_the_deep_read_fields(batch) -> None:
     story = batch[0]
     apply_triage([story], [kept(story.id)])
     story.refresh_from_db()
-    assert story.importance is None
-    assert story.shareability is None
     assert story.scale is None
+    assert story.key_facts == []
     assert story.scored_at is None

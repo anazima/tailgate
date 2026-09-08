@@ -36,9 +36,8 @@
   </label>
   <label class="flex flex-col gap-1">Sort
     <select name="sort" class="border rounded px-2 py-1">
+      <option value="rank" {% if filters.sort == "rank" %}selected{% endif %}>Best first</option>
       <option value="newest" {% if filters.sort == "newest" %}selected{% endif %}>Newest</option>
-      <option value="score" {% if filters.sort == "score" %}selected{% endif %}>Top score</option>
-      <option value="rank" {% if filters.sort == "rank" %}selected{% endif %}>Daily rank</option>
     </select>
   </label>
   <label class="flex flex-col gap-1">From

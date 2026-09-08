@@ -91,8 +91,6 @@ class Story(models.Model):
         max_length=12, choices=StoryStatus.choices, default=StoryStatus.NEW, db_index=True
     )
 
-    importance = models.PositiveSmallIntegerField(null=True, blank=True)
-    shareability = models.PositiveSmallIntegerField(null=True, blank=True)
     category = models.CharField(max_length=20, choices=Category.choices, blank=True)
     is_political = models.BooleanField(null=True, blank=True)
     is_cowboys = models.BooleanField(null=True, blank=True)
@@ -167,10 +165,6 @@ class Story(models.Model):
         ("shelf_life", "Shelf life"),
         ("novelty", "Novelty"),
     )
-
-    @property
-    def total_score(self) -> int:
-        return (self.importance or 0) + (self.shareability or 0)
 
     @property
     def rank_is_fresh(self) -> bool:

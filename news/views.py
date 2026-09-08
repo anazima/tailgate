@@ -9,8 +9,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
-from django.db.models import F, IntegerField, QuerySet
-from django.db.models.functions import Coalesce
+from django.db.models import F, QuerySet
 from django.http import FileResponse, Http404, HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -58,10 +57,7 @@ def _parse_date(value: str) -> datetime | None:
 
 
 def _ranked() -> QuerySet[Story]:
-    return Story.objects.select_related("source").annotate(
-        total=Coalesce(F("importance"), 0, output_field=IntegerField())
-        + Coalesce(F("shareability"), 0, output_field=IntegerField())
-    )
+    return Story.objects.select_related("source")
 
 
 def _apply_filters(request: HttpRequest, stories: QuerySet[Story]) -> tuple[QuerySet[Story], dict]:
@@ -72,7 +68,7 @@ def _apply_filters(request: HttpRequest, stories: QuerySet[Story]) -> tuple[Quer
         "date_from": request.GET.get("date_from", ""),
         "date_to": request.GET.get("date_to", ""),
         "images": request.GET.get("images", "with"),
-        "sort": request.GET.get("sort", "newest"),
+        "sort": request.GET.get("sort", "rank"),
     }
     if filters["images"] != "all":
         stories = stories.exclude(image_file="")
@@ -91,11 +87,10 @@ def _apply_filters(request: HttpRequest, stories: QuerySet[Story]) -> tuple[Quer
 
 def dashboard(request: HttpRequest) -> HttpResponse:
     stories, filters = _apply_filters(request, _ranked())
-    if filters["sort"] == "rank":
-        stories = stories.order_by(F("daily_rank").asc(nulls_last=True), "-total")
+    if filters["sort"] == "newest":
+        stories = stories.order_by("-published_at")
     else:
-        order = ("-total", "-published_at") if filters["sort"] == "score" else ("-published_at", "-total")
-        stories = stories.order_by(*order)
+        stories = stories.order_by(F("daily_rank").asc(nulls_last=True), "-published_at")
     stories = stories[:200]
     context = {
         "stories": stories,

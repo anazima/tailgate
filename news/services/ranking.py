@@ -13,7 +13,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from news.models import Story, StoryStatus
-from news.services import claude
+from news.services import analysis, claude
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +22,15 @@ MAX_RANKED = 60
 
 
 def _story_payload(story: Story) -> dict:
-    return {
+    payload = {
         "id": story.id,
         "title": story.post_title or story.title,
         "city": story.source.city,
         "category": story.category,
-        "score": story.total_score,
+        "read": story.read_confidence,
     }
+    payload.update({field: getattr(story, field) for field in analysis.DIMENSIONS})
+    return payload
 
 
 def apply_ranks(stories: list[Story], ordered_ids: list) -> int:
@@ -75,7 +77,11 @@ RANKABLE_STATUSES = (StoryStatus.SCORED, StoryStatus.GENERATED)
 
 
 def rankable_stories() -> list[Story]:
-    """Unposted stories inside the ranking window, best-scoring first.
+    """Unposted, deep-read stories inside the ranking window — newest first.
+
+    The pre-sort is by recency, not by any score: ordering is the ranker's whole job, and
+    a numeric pre-rank would be a second scoring system competing with it. Stories that
+    were never deep-read have no dimensions to rank on, so they sit this out.
 
     Posted and skipped stories are excluded on purpose: once the owner has acted on a
     story, it should not keep reshuffling the board underneath them.
@@ -83,8 +89,9 @@ def rankable_stories() -> list[Story]:
     cutoff = timezone.now() - timedelta(hours=settings.RANK_WINDOW_HOURS)
     return list(
         Story.objects.filter(status__in=RANKABLE_STATUSES, published_at__gte=cutoff)
+        .exclude(analysed_at=None)
         .select_related("source")
-        .order_by("-importance", "-shareability", "-published_at")[:MAX_RANKED]
+        .order_by("-published_at")[:MAX_RANKED]
     )
 
 

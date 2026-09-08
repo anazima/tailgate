@@ -3,7 +3,7 @@
 ## What this project is
 
 A small self-hosted web tool that fetches the latest news from a fixed list of Texas
-news RSS feeds, scores each story for importance / trending / audience fit using the
+news RSS feeds, ranks each story for importance / audience fit using the
 Claude API, and turns the best stories into ready-to-post Facebook content
 (title + short description + downloadable image).
 
@@ -112,9 +112,9 @@ texas-news-curator/
   (JSON, one justification per dimension quoting the article), key_facts (JSON list of
   3–5 facts), read_confidence (`full` / `partial` / `headline_only`), article_words,
   score_reason, analysed_at, scored_at
-- importance (1–10) and shareability (1–10) are **derived** from the six dimensions by
-  `analysis.rollup()`. They are not scored directly. Everything downstream — the `/20`
-  badge, GENERATION_THRESHOLD, PUSH_SCORE_THRESHOLD, sorting, push — reads these two.
+- **There is no numeric score.** The six dimensions feed the ranking pass, and
+  `daily_rank` is the only thing that gates anything. There is deliberately no second,
+  absolute scale competing with it.
 - Ranking + feedback: daily_rank, ranked_at, performance (`well` / `poorly`), performance_at
 - Generated fields (nullable until generated): post_title, post_description,
   reel_script (optional, for a separate reel workflow), generated_at
@@ -148,24 +148,24 @@ texas-news-curator/
 3b. **deep read** (stage 2, Sonnet) — for `triaged` stories, fetch the article, extract
    clean text with trafilatura, cut to `ARTICLE_MAX_WORDS` (500) and score the six
    dimensions with a justification each plus 3–5 key_facts. read_confidence is derived
-   in code from the extracted word count, never asked of the model. Rolls up to
-   importance/shareability → `scored`. Bounded by DEEP_READ_MAX_PER_RUN and
+   in code from the extracted word count, never asked of the model. → `scored`.
+   Bounded by DEEP_READ_MAX_PER_RUN and
    DEEP_READ_MAX_AGE_HOURS so an unusual news day cannot run away and a story whose
    fetch keeps failing is not retried hourly for 30 days.
-3c. **rank** (stage 3, Haiku) — order the last RANK_WINDOW_HOURS of `scored` stories
-   against each other, writing daily_rank. Models calibrate badly in absolute terms, so
-   a fixed threshold gives nothing on a quiet day and a flood on a busy one. Posted and
-   skipped stories are excluded so the board stops moving once the owner has acted.
-4. **generate_content** — for stories with status `scored` and
-   `(importance + shareability) >= threshold` (default 12, env-configurable), fetch
-   the article page, extract the main image, download it to media/, then ask Claude
-   for post_title and post_description. → `generated`.
-5. **notify** — push a browser notification for each newly generated story with an
-   image and `importance + shareability >= PUSH_SCORE_THRESHOLD` (default 18).
-   Each story is notified once (`notified_at`); 6+ at once collapse into one summary.
-6. **cleanup** — delete stories (all statuses), their image files, orphaned files in
+3c. **rank** (stage 3, Haiku) — order the deep-read stories of the last
+   RANK_WINDOW_HOURS against each other, writing daily_rank. This is the **only**
+   judgment the system makes: models calibrate badly in absolute terms, so a fixed
+   threshold gives nothing on a quiet day and a flood on a busy one. Ranks are cleared
+   wherever they are no longer valid — each pass renumbers from 1, so a leftover number
+   would collide with a fresh one. Posted and skipped stories are excluded so the board
+   stops moving once the owner has acted, keeping their rank as a record.
+4. **generate_content** — for `scored` stories ranked in the top `GENERATION_TOP_N`
+   (default 10) with a fresh rank, fetch the article page, extract the main image,
+   download it to media/, then ask Claude for post_title and post_description.
+   → `generated`.
+5. **cleanup** — delete stories (all statuses), their image files, orphaned files in
    `media/stories/`, and PipelineRun rows older than `RETENTION_DAYS` (default 30).
-7. **run_pipeline** — runs all of the above in order, every hour at :00. Skips itself if another
+6. **run_pipeline** — runs all of the above in order, every hour at :00. Skips itself if another
    run is still in progress (a run unfinished after 45 min counts as crashed). Each
    step's failure is recorded on the PipelineRun but does not stop the next step.
 
@@ -234,7 +234,7 @@ never as a silent "0 scored".
 
 ## Dashboard (single page + detail)
 
-- `/` — cards sorted by (importance + shareability) desc, then published_at desc.
+- `/` — cards sorted by daily_rank (best first), then published_at desc.
   Default filters: status `generated`, images `with`. Filters: category, source
   city, status, images, date range. Show cluster_size as a "N sources" badge.
 - Each card: image thumbnail, post_title, post_description, source + city + time,
@@ -311,16 +311,19 @@ plus: Django-user login, hourly schedule (launchd locally, systemd on the VPS),
 30-day retention, browser push for 18+ stories, TN favicon/manifest.
 
 The single-stage scorer was replaced by the three-stage cascade described under
-Pipeline: triage → deep read → rank. Stories scored before that change keep their old
-importance/shareability and simply show no dimension breakdown; the templates gate on
-`scored_at` and `dimension_rows`, so they render as before and the 30-day purge clears
-them out on its own. There is deliberately no backfill — re-reading hundreds of stories
-that are past their shelf life would cost real money for no benefit.
+Pipeline: triage → deep read → rank. The numeric score was then removed entirely at the
+owner's request — one system, not two. Stories scored before the change have no
+dimensions and no rank, so they render without a badge and never generate; the 30-day
+purge clears them on its own. There is deliberately no backfill.
+
+Automatic push notifications were removed with the score that gated them. The push
+plumbing (service worker, VAPID, subscribe endpoints, `notify()`, the test button) is
+intact and unused by the pipeline — the dashboard is the whole interface now.
 
 Not yet done:
-- The rollup weights and the 1–5 anchors are calibrated by reasoning, not by observed
-  results. Watch the first few days: if too much or too little clears
-  GENERATION_THRESHOLD, the weights in `analysis.py` are the dial, not the threshold.
+- The 1–5 anchors and `GENERATION_TOP_N` are set by reasoning, not by observed results.
+  Watch the first few days: if too many or too few stories get written up each day,
+  GENERATION_TOP_N is the dial.
 - No worked examples in the deep-read prompt yet. Once ~30–50 stories carry a
   `performance` verdict, feeding the best and worst back into the prompt is what turns
   this from Claude's generic opinion into a ranker tuned to this page.
@@ -333,8 +336,8 @@ Not yet done:
 `SCORING_MODEL` / `TRIAGE_MODEL`, `DEEP_READ_MODEL`, `GENERATION_MODEL`,
 `ARTICLE_MAX_WORDS` (500), `ARTICLE_FETCH_WORKERS` (8), `DEEP_READ_BATCH_SIZE` (6),
 `DEEP_READ_MAX_PER_RUN` (15), `DEEP_READ_MAX_AGE_HOURS` (48), `RANK_WINDOW_HOURS` (24),
-`GENERATION_THRESHOLD` (12), `GENERATE_REEL_SCRIPT`,
-`PUSH_SCORE_THRESHOLD` (18), `RETENTION_DAYS` (30), `VAPID_*`, `DB_ENGINE`
+`GENERATION_TOP_N` (10), `GENERATE_REEL_SCRIPT`,
+`RETENTION_DAYS` (30), `VAPID_*`, `DB_ENGINE`
 (`sqlite` dev / `postgres` VPS), `ANTHROPIC_API_KEY`.
 
 ## Out of scope (do not build unless asked)

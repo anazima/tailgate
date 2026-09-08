@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from news.models import PipelineRun
-from news.services import analysis, cleanup, feeds, generation, push, ranking, triage
+from news.services import analysis, cleanup, feeds, generation, ranking, triage
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,6 @@ class Command(BaseCommand):
             run.stories_scored = self._step("deep read", analysis.deep_read_triaged, errors)
             run.stories_ranked = self._step("rank", ranking.rank_recent, errors)
             run.stories_generated = self._step("generate", generation.generate_all, errors)
-            self._step("notify", push.notify_top_stories, errors)
             self._step("cleanup", cleanup.purge_old_data, errors)
         finally:
             run.error = "\n".join(errors)[:2000]

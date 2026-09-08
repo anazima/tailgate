@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 import pytest
+from django.utils import timezone
 
 from news.models import StoryStatus
 from news.services import generation
@@ -17,7 +20,7 @@ def test_build_prompt_survives_braces_in_template_and_story(source, make_story, 
 @pytest.mark.django_db
 def test_generate_all_raises_when_every_story_fails(source, make_story, settings, monkeypatch) -> None:
     settings.ANTHROPIC_API_KEY = "x"
-    make_story(source, "A", status=StoryStatus.SCORED, importance=9, shareability=9)
+    make_story(source, "A", status=StoryStatus.SCORED, daily_rank=1, ranked_at=timezone.now())
 
     def boom(story):
         raise ValueError("bad template")
@@ -30,8 +33,8 @@ def test_generate_all_raises_when_every_story_fails(source, make_story, settings
 @pytest.mark.django_db
 def test_generate_all_tolerates_partial_failure(source, make_story, settings, monkeypatch) -> None:
     settings.ANTHROPIC_API_KEY = "x"
-    ok = make_story(source, "A", status=StoryStatus.SCORED, importance=9, shareability=9)
-    make_story(source, "B", status=StoryStatus.SCORED, importance=8, shareability=8)
+    ok = make_story(source, "A", status=StoryStatus.SCORED, daily_rank=1, ranked_at=timezone.now())
+    make_story(source, "B", status=StoryStatus.SCORED, daily_rank=2, ranked_at=timezone.now())
 
     def one_works(story):
         if story.id != ok.id:
@@ -39,3 +42,27 @@ def test_generate_all_tolerates_partial_failure(source, make_story, settings, mo
 
     monkeypatch.setattr(generation, "generate_for_story", one_works)
     assert generation.generate_all() == 1
+
+
+@pytest.mark.django_db
+def test_only_the_top_ranked_stories_are_generated(source, make_story, settings) -> None:
+    """Rank replaced the score threshold: a fixed number every day, quiet or busy."""
+    settings.GENERATION_TOP_N = 2
+    ranked = [
+        make_story(source, f"Ranked {i}", status=StoryStatus.SCORED, daily_rank=i, ranked_at=timezone.now())
+        for i in (1, 2, 3)
+    ]
+    unranked = make_story(source, "Never ranked", status=StoryStatus.SCORED)
+    stale = make_story(
+        source,
+        "Stale rank",
+        status=StoryStatus.SCORED,
+        daily_rank=1,
+        ranked_at=timezone.now() - timedelta(hours=settings.RANK_WINDOW_HOURS + 1),
+    )
+
+    eligible = generation.eligible_stories()
+
+    assert eligible == ranked[:2], "top N by rank, in rank order"
+    assert unranked not in eligible
+    assert stale not in eligible, "a rank from outside the window is not a current judgment"
