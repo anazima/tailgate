@@ -120,7 +120,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # --- App settings ---
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+# Stage 1 triage and stage 3 ranking are cheap headline-level passes; stage 2 reads the
+# article and does the real judging. SCORING_MODEL is honoured as the old name for triage
+# so an existing .env keeps working.
 SCORING_MODEL = os.environ.get("SCORING_MODEL", "claude-haiku-4-5")
+TRIAGE_MODEL = os.environ.get("TRIAGE_MODEL", SCORING_MODEL)
+DEEP_READ_MODEL = os.environ.get("DEEP_READ_MODEL", "claude-sonnet-5")
 GENERATION_MODEL = os.environ.get("GENERATION_MODEL", "claude-sonnet-5")
 
 GENERATION_THRESHOLD = int(os.environ.get("GENERATION_THRESHOLD", "12"))
@@ -130,6 +135,13 @@ GENERATE_REEL_SCRIPT = env_bool("GENERATE_REEL_SCRIPT", False)
 # fetched at once. The text is used for scoring and then discarded, never stored.
 ARTICLE_MAX_WORDS = int(os.environ.get("ARTICLE_MAX_WORDS", "500"))
 ARTICLE_FETCH_WORKERS = int(os.environ.get("ARTICLE_FETCH_WORKERS", "8"))
+# The pipeline runs hourly, so this caps what one unusual news day can spend.
+DEEP_READ_BATCH_SIZE = int(os.environ.get("DEEP_READ_BATCH_SIZE", "6"))
+DEEP_READ_MAX_PER_RUN = int(os.environ.get("DEEP_READ_MAX_PER_RUN", "15"))
+# Triaged stories older than this are past their shelf life; never retry them.
+DEEP_READ_MAX_AGE_HOURS = int(os.environ.get("DEEP_READ_MAX_AGE_HOURS", "48"))
+# Stage 3 ranks stories against each other over this sliding window.
+RANK_WINDOW_HOURS = int(os.environ.get("RANK_WINDOW_HOURS", "24"))
 
 # Web push (VAPID). Generate with: python manage.py generate_vapid_keys
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
