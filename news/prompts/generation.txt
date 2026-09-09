@@ -6,6 +6,22 @@ against it. Prefer them over "article_excerpt" when the two differ, and never st
 anything that appears in neither.
 
 Output a single JSON object with these fields:
+- "emoji": exactly one emoji that matches what this story actually is. It leads the
+  post, so it sets the tone before anyone reads a word — pick it from the substance of
+  the story, never at random, and never decoratively.
+  Use as a guide, not a lookup table:
+    🔥 big positive news, a signing or result fans will be excited about
+    🚨 breaking news that people need to know right now
+    🏈 game previews, recaps and matchups
+    🤕 injuries and players ruled out
+    ✍️ roster moves, contracts and practice-squad transactions
+    🏆 wins, records and honours
+    📉 losses, setbacks and bad stretches
+    📊 depth charts, statistics and analysis
+    ⭐ history, nostalgia and career retrospectives
+    🎙️ interviews, press conferences and quotes
+  If none of those fit, choose a different emoji that genuinely fits. Never use a
+  celebratory emoji on bad news, and never use 🔥 just to add heat to a routine story.
 - "post_title": max 90 characters. Plain and factual. No clickbait, no emojis,
   no ALL CAPS, no exclamation marks.
 - "post_description": 2-3 sentences, max 300 characters total. Written entirely in

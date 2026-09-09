@@ -145,6 +145,11 @@ class Story(models.Model):
     performance = models.CharField(max_length=10, choices=Performance.choices, blank=True)
     performance_at = models.DateTimeField(null=True, blank=True)
 
+    emoji = models.CharField(
+        max_length=8,
+        blank=True,
+        help_text="One emoji matching the story's tone, shown before the description.",
+    )
     post_title = models.CharField(max_length=200, blank=True)
     post_description = models.TextField(blank=True)
     reel_script = models.TextField(blank=True)

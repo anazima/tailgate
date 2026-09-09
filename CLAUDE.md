@@ -138,7 +138,7 @@ texas-news-curator/          # directory name kept; see Target audience
   reason to post now, not a reason to rank down. There is deliberately no second,
   absolute scale competing with it.
 - Ranking + feedback: daily_rank, ranked_at, performance (`well` / `poorly`), performance_at
-- Generated fields (nullable until generated): post_title, post_description,
+- Generated fields (nullable until generated): emoji, post_title, post_description,
   reel_script (optional, for a separate reel workflow), generated_at
 - posted_at, skipped_at, notified_at (push sent once per story)
 
@@ -238,7 +238,12 @@ never as a silent "0 scored".
 - read_confidence is stated to the model as a measured fact, not requested from it.
 
 ### Generation prompt requirements
-- `post_title`: max 90 characters, plain, no clickbait, no emojis, no ALL CAPS.
+- `emoji`: exactly one emoji leading the description, chosen from the story's substance
+  (🤕 injuries, ✍️ roster moves, 🏈 game news, 🚨 breaking, 🔥 big positive news, and so
+  on). Never celebratory on bad news. It is stored on the Story and included in the
+  Copy description / Copy both buttons, since it is part of what gets posted.
+- `post_title`: max 90 characters, plain, no clickbait, **no emojis** (the emoji belongs
+  to the description only), no ALL CAPS.
 - `post_description`: 2–3 sentences, max ~300 characters, written in our own words
   (never copy sentences from the article), neutral reporting tone, ends with the
   source name in the form "via Blogging The Boys".

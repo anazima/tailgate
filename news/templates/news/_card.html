@@ -21,7 +21,7 @@
          class="font-display text-3xl font-bold leading-tight tracking-tight text-white hover:underline decoration-2 underline-offset-2">{{ story.post_title|default:story.title }}</a>
     </h2>
     {% if story.post_description %}
-      <p class="text-base text-stone-700 leading-relaxed">{{ story.post_description }}</p>
+      <p class="text-base text-stone-700 leading-relaxed">{% if story.emoji %}{{ story.emoji }} {% endif %}{{ story.post_description }}</p>
     {% elif story.summary %}
       <p class="text-base text-stone-500 leading-relaxed">{{ story.summary|truncatechars:220 }}</p>
     {% endif %}
@@ -49,8 +49,8 @@
     <div class="flex flex-wrap gap-1.5 text-xs pt-1">
       {% if story.post_title %}
         <button class="btn-copy" data-copy="{{ story.post_title }}">Copy title</button>
-        <button class="btn-copy" data-copy="{{ story.post_description }}">Copy description</button>
-        <button class="btn-copy" data-copy="{{ story.post_title }}&#10;&#10;{{ story.post_description }}">Copy both</button>
+        <button class="btn-copy" data-copy="{% if story.emoji %}{{ story.emoji }} {% endif %}{{ story.post_description }}">Copy description</button>
+        <button class="btn-copy" data-copy="{{ story.post_title }}&#10;&#10;{% if story.emoji %}{{ story.emoji }} {% endif %}{{ story.post_description }}">Copy both</button>
       {% endif %}
       {% if story.image_file %}
         <a class="btn" href="{% url 'news:download_image' story.id %}">Download image</a>

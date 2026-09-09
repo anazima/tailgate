@@ -66,3 +66,24 @@ def test_only_the_top_ranked_stories_are_generated(source, make_story, settings)
     assert eligible == ranked[:2], "top N by rank, in rank order"
     assert unranked not in eligible
     assert stale not in eligible, "a rank from outside the window is not a current judgment"
+
+
+@pytest.mark.django_db
+def test_apply_generation_stores_a_matching_emoji(source, make_story) -> None:
+    story = make_story(source, "Tyler Smith to IR")
+    generation.apply_generation(
+        story, {"emoji": "🤕", "post_title": "Smith to IR", "post_description": "He is out. via BTB"}
+    )
+    story.refresh_from_db()
+    assert story.emoji == "🤕"
+
+
+@pytest.mark.django_db
+def test_apply_generation_rejects_a_word_where_an_emoji_belongs(source, make_story) -> None:
+    """Models sometimes answer with a name instead of the character; storing it looks broken."""
+    story = make_story(source, "Cowboys sign a guard")
+    generation.apply_generation(
+        story, {"emoji": "fire", "post_title": "Signed", "post_description": "Done deal. via BTB"}
+    )
+    story.refresh_from_db()
+    assert story.emoji == ""

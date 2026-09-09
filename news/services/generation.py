@@ -55,6 +55,10 @@ def apply_generation(story: Story, result: dict) -> None:
         raise ValueError("generation response missing post_title or post_description")
     story.post_title = post_title[:200]
     story.post_description = post_description[:1000]
+    # One character plus a possible variation selector or ZWJ sequence; anything longer
+    # is the model returning words instead of an emoji, so drop it rather than store junk.
+    emoji = str(result.get("emoji", "")).strip()
+    story.emoji = emoji[:8] if emoji and not emoji.isascii() else ""
     if settings.GENERATE_REEL_SCRIPT:
         story.reel_script = str(result.get("reel_script", "")).strip()
     story.generated_at = timezone.now()
