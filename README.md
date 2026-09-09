@@ -1,9 +1,14 @@
 # Texas News Curator
 
-Self-hosted tool that pulls Texas news RSS feeds, scores stories with Claude for a
-Texas / Dallas Cowboys Facebook page, and turns the best ones into ready-to-post
-title + description + image. The owner opens the dashboard, copies the text,
-downloads the image, and posts manually. See `CLAUDE.md` for the full spec.
+Self-hosted tool that pulls Texas news RSS feeds, reads the articles with Claude and
+ranks them against each other for a Texas / Dallas Cowboys Facebook page, then turns
+the top-ranked ones into ready-to-post title + description + image. The owner opens
+the dashboard, copies the text, downloads the image, and posts manually.
+See `CLAUDE.md` for the full spec.
+
+Scoring is a three-stage cascade — cheap headline triage, a Sonnet deep read of the
+survivors capped at 500 words, then a relative ranking pass. There is no absolute
+score: `daily_rank` is the only thing that gates anything.
 
 ## Local development
 

@@ -240,20 +240,29 @@ never as a silent "0 scored".
 ## Dashboard (single page + detail)
 
 - `/` — cards sorted by daily_rank (best first), then published_at desc.
-  Default filters: status `generated`, images `with`. Filters: category, source
-  city, status, images, date range. Show cluster_size as a "N sources" badge.
+  Default filters: status **"To post + posted"** (`current` — generated plus posted, so
+  the owner can see what is done and what is not; skipped and hidden stay out),
+  category **Cowboys**, images `with`, sort `rank`. Filters: category, source city,
+  status, images, date range. Show cluster_size as a "N sources" badge.
 - Each card: image thumbnail, post_title, post_description, source + city + time,
-  a single **total score badge** (e.g. `18/20`; breakdown on hover and on the detail
-  page), buttons: **Copy title**, **Copy description**, **Copy both**,
-  **Download image**, **Open article**, **Mark posted**, **Skip**.
-- `/story/<id>/` — full detail including score_reason, reel_script, raw feed data.
-- `/hidden/` — political / live-sports stories that were auto-hidden, with an
-  "unhide" button (owner override).
+  a **rank badge** (`#1`; the six dimensions on hover, in full on the detail page),
+  a `Headline only` chip when the site blocked the fetch, a green **Posted** badge once
+  posted, buttons: **Copy title**, **Copy description**, **Copy both**,
+  **Download image**, **Open article**, **Mark posted**, **Skip**, and after posting
+  **Did well** / **Did poorly**.
+- Marking posted **re-renders the card in place** rather than removing it. Skip and
+  unhide do remove it — those mean "not this one".
+- `/story/<id>/` — full detail: the six dimensions with their quoted justifications,
+  key_facts, read confidence, rank, score_reason, reel_script, raw feed data.
+- `/hidden/` — stories triage discarded (politics, non-Cowboys live sports, no Texas
+  angle, sensational crime, duplicates), each showing why, with an "unhide" button
+  (owner override). Unhide returns a story to `triaged` so stage 2 reads it properly.
 - `/sources/` — manage sources (Django admin is acceptable for this).
 - Header is a single compact bar on every screen size: last-run status (with error
   flag) on the left, **Run now** + a round burger button on the right. The burger
   opens a dropdown: Dashboard, Hidden, Sources, Admin, Enable/Disable notifications,
-  Send test notification, Log out. No page title.
+  Send test notification, Log out. No page title. (The pipeline sends no notifications
+  of its own; the menu items drive the manual test path only.)
 - **Run now** spawns `run_pipeline` as a detached subprocess and must not block the
   request; the header polls `/pipeline-status/` every 8 s while a run is active.
 - Mobile-friendly: the owner may open this on a phone. Filters collapse behind a
