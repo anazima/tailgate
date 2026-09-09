@@ -56,7 +56,8 @@ def test_dashboard_filters(client, source, other_source, make_story, generated) 
 def test_story_actions(client, generated) -> None:
     url = reverse("news:story_action", args=[generated.id])
     resp = client.post(url, {"action": "posted"}, HTTP_HX_REQUEST="true")
-    assert resp.status_code == 200 and resp.content == b""
+    # The card is re-rendered rather than removed, so the owner can see what is done.
+    assert resp.status_code == 200 and b"Posted" in resp.content
     generated.refresh_from_db()
     assert generated.status == StoryStatus.POSTED and generated.posted_at is not None
 
@@ -271,3 +272,44 @@ def test_dashboard_opens_on_cowboys(client, source, make_story) -> None:
 
     everything = client.get(reverse("news:dashboard"), {"category": ""}).content.decode()
     assert "Brisket festival" in everything
+
+
+@pytest.mark.django_db
+def test_marking_posted_keeps_the_card_with_a_label(client, source, make_story) -> None:
+    """The owner needs to see what is done and what is not, so the card must not vanish."""
+    story = make_story(source, "Cowboys sign lineman", status=StoryStatus.GENERATED, category="cowboys")
+    response = client.post(
+        reverse("news:story_action", args=[story.id]),
+        {"action": "posted"},
+        headers={"HX-Request": "true"},
+    )
+    story.refresh_from_db()
+
+    assert story.status == StoryStatus.POSTED
+    body = response.content.decode()
+    assert "Cowboys sign lineman" in body, "the card comes back rather than being removed"
+    assert "Posted" in body
+
+
+@pytest.mark.django_db
+def test_skipping_still_removes_the_card(client, source, make_story) -> None:
+    story = make_story(source, "Not interested", status=StoryStatus.GENERATED, category="cowboys")
+    response = client.post(
+        reverse("news:story_action", args=[story.id]),
+        {"action": "skip"},
+        headers={"HX-Request": "true"},
+    )
+    assert response.content == b""
+
+
+@pytest.mark.django_db
+def test_default_view_shows_both_ready_and_posted(client, source, make_story) -> None:
+    make_story(source, "Ready to go", status=StoryStatus.GENERATED, category="cowboys", image_file="s/1.jpg")
+    make_story(source, "Already posted", status=StoryStatus.POSTED, category="cowboys", image_file="s/2.jpg")
+    make_story(source, "Not wanted", status=StoryStatus.SKIPPED, category="cowboys", image_file="s/3.jpg")
+
+    body = client.get(reverse("news:dashboard")).content.decode()
+
+    assert "Ready to go" in body
+    assert "Already posted" in body
+    assert "Not wanted" not in body, "skipped stories stay out of the working view"

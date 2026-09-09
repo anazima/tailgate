@@ -20,7 +20,12 @@ from news.services import push
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_STATUS = StoryStatus.GENERATED
+# "current" is not a StoryStatus: it means everything still in play — ready to post, plus
+# what has already been posted — so the owner can see at a glance what is done and what is
+# not. Skipped and hidden stay out.
+CURRENT_STATUS = "current"
+CURRENT_STATUSES = (StoryStatus.GENERATED, StoryStatus.POSTED)
+DEFAULT_STATUS = CURRENT_STATUS
 # The dashboard opens on Cowboys; everything else is one dropdown away.
 DEFAULT_CATEGORY = Category.COWBOYS
 
@@ -74,7 +79,9 @@ def _apply_filters(request: HttpRequest, stories: QuerySet[Story]) -> tuple[Quer
     }
     if filters["images"] != "all":
         stories = stories.exclude(image_file="")
-    if filters["status"] and filters["status"] != "all":
+    if filters["status"] == CURRENT_STATUS:
+        stories = stories.filter(status__in=CURRENT_STATUSES)
+    elif filters["status"] and filters["status"] != "all":
         stories = stories.filter(status=filters["status"])
     if filters["category"]:
         stories = stories.filter(category=filters["category"])
@@ -157,7 +164,10 @@ def story_action(request: HttpRequest, story_id: int) -> HttpResponse:
         story.status, story.is_political = StoryStatus.TRIAGED, False
     story.save()
     if request.headers.get("HX-Request"):
-        # The card is removed from whichever list it was in.
+        if action == "posted":
+            # Stays on screen, now labelled, so the owner can see what is done.
+            return render(request, "news/_card.html", {"story": story})
+        # Skipped and unhidden cards leave the list they were in.
         return HttpResponse("")
     return redirect(request.POST.get("next") or "news:dashboard")
 

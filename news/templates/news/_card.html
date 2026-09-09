@@ -25,7 +25,12 @@
         title="This site blocked our fetch, so this was judged from the headline alone">Headline only</span>{% endif %}
       {% if story.category %}<span class="bg-stone-100 text-stone-700 px-2 py-0.5 rounded">{{ story.get_category_display }}</span>{% endif %}
       {% if story.is_cowboys %}<span class="bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded">Cowboys</span>{% endif %}
-      <span class="ml-auto text-stone-500 uppercase">{{ story.get_status_display }}</span>
+      {% if story.status == "posted" %}
+        <span class="ml-auto bg-green-600 text-white font-semibold px-2 py-0.5 rounded"
+              title="Posted {{ story.posted_at }}">Posted</span>
+      {% else %}
+        <span class="ml-auto text-stone-500 uppercase">{{ story.get_status_display }}</span>
+      {% endif %}
     </div>
 
     <h2 class="font-semibold leading-snug">
