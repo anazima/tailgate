@@ -10,7 +10,17 @@
   <link rel="apple-touch-icon" href="{% static 'news/apple-touch-icon.png' %}">
   <link rel="manifest" href="{% static 'news/manifest.json' %}">
   <meta name="theme-color" content="#1c1917">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&display=swap">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Headline face. Archivo is a modern grotesque with enough weight to hold a dark
+    // band, and stays readable at a glance — this audience skews 45+.
+    tailwind.config = {
+      theme: { extend: { fontFamily: { display: ['Archivo', 'system-ui', '-apple-system', 'sans-serif'] } } },
+    };
+  </script>
   <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
   <link rel="stylesheet" href="{% static 'news/app.css' %}">
 </head>
