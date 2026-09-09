@@ -18,12 +18,12 @@
   <div class="p-4 flex flex-col gap-2 grow">
     <h2 class="-mx-4 -mt-4 mb-1 bg-cowboys px-4 py-3">
       <a href="{% url 'news:story_detail' story.id %}"
-         class="font-display text-lg font-bold leading-tight tracking-tight text-white hover:underline decoration-2 underline-offset-2">{{ story.post_title|default:story.title }}</a>
+         class="font-display text-xl font-bold leading-tight tracking-tight text-white hover:underline decoration-2 underline-offset-2">{{ story.post_title|default:story.title }}</a>
     </h2>
     {% if story.post_description %}
-      <p class="text-sm text-stone-700">{{ story.post_description }}</p>
+      <p class="text-base text-stone-700 leading-relaxed">{{ story.post_description }}</p>
     {% elif story.summary %}
-      <p class="text-sm text-stone-500">{{ story.summary|truncatechars:220 }}</p>
+      <p class="text-base text-stone-500 leading-relaxed">{{ story.summary|truncatechars:220 }}</p>
     {% endif %}
 
     <div class="flex flex-wrap gap-1 text-xs">
@@ -42,7 +42,7 @@
       {% endif %}
     </div>
 
-    <p class="text-xs text-stone-500 mt-auto pt-2">
+    <p class="text-sm text-stone-500 mt-auto pt-2">
       {{ story.source.name }} · {{ story.source.get_city_display }} · {{ story.published_at|timesince }} ago
     </p>
 
