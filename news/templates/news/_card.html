@@ -16,9 +16,9 @@
   </div>
 
   <div class="p-4 flex flex-col gap-2 grow">
-    <h2 class="-mx-4 -mt-4 mb-1 bg-stone-900 px-4 py-3">
+    <h2 class="-mx-4 -mt-4 mb-1 bg-cowboys px-4 py-3">
       <a href="{% url 'news:story_detail' story.id %}"
-         class="font-display text-lg font-bold leading-tight tracking-tight text-white hover:text-amber-400">{{ story.post_title|default:story.title }}</a>
+         class="font-display text-lg font-bold leading-tight tracking-tight text-white hover:underline decoration-2 underline-offset-2">{{ story.post_title|default:story.title }}</a>
     </h2>
     {% if story.post_description %}
       <p class="text-sm text-stone-700">{{ story.post_description }}</p>

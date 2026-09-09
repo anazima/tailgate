@@ -18,7 +18,13 @@
     // Headline face. Archivo is a modern grotesque with enough weight to hold a dark
     // band, and stays readable at a glance — this audience skews 45+.
     tailwind.config = {
-      theme: { extend: { fontFamily: { display: ['Archivo', 'system-ui', '-apple-system', 'sans-serif'] } } },
+      theme: {
+        extend: {
+          fontFamily: { display: ['Archivo', 'system-ui', '-apple-system', 'sans-serif'] },
+          // Official Dallas Cowboys palette.
+          colors: { cowboys: { DEFAULT: '#041E42', royal: '#003594', silver: '#869397' } },
+        },
+      },
     };
   </script>
   <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
