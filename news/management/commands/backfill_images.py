@@ -26,7 +26,7 @@ class Command(BaseCommand):
         for source in Source.objects.filter(is_active=True):
             try:
                 parsed = feedparser.parse(
-                    source.feed_url, agent="Mozilla/5.0 (compatible; TexasNewsCurator/1.0)"
+                    source.feed_url, agent="Mozilla/5.0 (compatible; TailgateNation/1.0)"
                 )
             except Exception as exc:
                 logger.warning("feed error for %s: %s", source.name, exc)

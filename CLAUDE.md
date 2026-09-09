@@ -1,10 +1,10 @@
-# CLAUDE.md — Texas News Curator
+# CLAUDE.md — Tailgate Nation
 
 ## What this project is
 
-A small self-hosted web tool that fetches the latest news from a fixed list of Texas
-news RSS feeds, ranks each story for importance / audience fit using the
-Claude API, and turns the best stories into ready-to-post Facebook content
+A small self-hosted web tool that fetches the latest **Dallas Cowboys** news from a fixed
+list of RSS feeds, ranks the stories against each other for audience fit using the
+Claude API, and turns the top-ranked ones into ready-to-post Facebook content
 (title + short description + downloadable image).
 
 The owner opens the dashboard once a day, picks stories, copies the text, downloads
@@ -15,27 +15,38 @@ boring, and reliable. Auth is a single Django user (same login for the dashboard
 
 ## Target audience (drives all content decisions)
 
-- Facebook page audience: ~97% US, almost all Texas.
-- The page runs Dallas Cowboys coverage. Texas-wide stories are welcome when they appear,
-  but Cowboys news is the main beat and does not need to yield to city rotation.
-- **Production runs Cowboys-only, deliberately.** As of 2026-09-09 the owner removed every
-  Texas news source from the production database, leaving the four Cowboys feeds plus
-  Pro Football Rumors. The Texas sources are still seeded by migration 0002 and still
-  exist in the local dev database — do NOT "restore" them on production; that was a
-  decision, not a fault. The five-city machinery (City enum, city filter, rotation
-  wording in the prompts) is kept so it still works if Texas sources are ever re-added.
+- **This is a Dallas Cowboys page.** Every story it posts is about the Cowboys.
+- Facebook page audience: ~97% US, almost all Texas, and they are Cowboys fans first.
 - ~74% aged 45+, male-skewed. Tone: calm, clear, plain English, no slang, no memes,
   no Gen-Z humor, no hype.
-- Page identity: Dallas Cowboys, with Texas news alongside it when there is any.
-  Cowboys stories are treated exactly like any other category — no special restrictions. Live game news, breaking news, scores,
-  injuries and in-game developments are all welcome alongside analysis, roster news,
-  off-field stories and nostalgia. The page posts Cowboys news as it happens.
+- All Cowboys news is in scope — live game news, breaking news, scores, injuries and
+  in-game developments, alongside roster moves, coaching and front-office news, the
+  draft, off-field stories, fan culture, and history/nostalgia.
 - HARD RULE: no politics, no border/immigration, no elections, no candidates, no
-  culture-war topics. These must be auto-flagged and hidden by default.
-- Good categories: weather & severe storms, wildfires, hurricanes, community &
-  human-interest, local business & economy, cost of living, Texas history / nostalgia,
-  Cowboys (including live and breaking), high school & college football culture,
-  food & BBQ, Texas pride.
+  culture-war topics. This holds even when the story involves the team or its players.
+- Not this page: other NFL teams, other sports, general news. League-wide stories matter
+  only insofar as they affect the Cowboys — a story that merely name-drops them is a
+  discard. Several feeds (Pro Football Rumors) are league-wide, so this rule does real
+  work every run.
+
+### How this came to be a Cowboys-only page
+
+It began as a Texas news page with Cowboys as one topic. On 2026-09-09 the owner removed
+every Texas news source from the production database, leaving the four Cowboys feeds plus
+Pro Football Rumors, then asked for the code to follow. **Do NOT "restore" the Texas
+sources on production** — that was a decision, not a fault.
+
+What was kept deliberately, so it does not look like an oversight:
+
+- Migration `0002_seed_sources` still seeds the Texas feeds, and they still exist in the
+  local dev database. Leave both alone.
+- The `City` enum, `Source.city` and its `STATEWIDE` default stay. `City.STATEWIDE` is the
+  field default and `tests/conftest.py` uses it across nearly the whole suite; removing it
+  would break far more than it tidies. The dashboard's City *filter* is gone, since every
+  source is now `dallas` or `other`.
+- The postgres database and user are still named `texas_news`, and the project directory
+  is still `texas-news-curator`. Renaming a live database or the VPS checkout path breaks
+  the deploy for a cosmetic gain.
 
 ## Stack
 
@@ -60,7 +71,7 @@ boring, and reliable. Auth is a single Django user (same login for the dashboard
 ## Project layout
 
 ```
-texas-news-curator/
+texas-news-curator/          # directory name kept; see Target audience
 ├── CLAUDE.md
 ├── README.md
 ├── .env.example
@@ -113,8 +124,9 @@ texas-news-curator/
 - cluster_key (see dedupe) and cluster_size (how many sources carry this story)
 - status enum: `new` → `triaged` → `scored` → `generated` → `posted` | `skipped` | `hidden`
 - Triage fields (stage 1, headline only): triage_score (1–5), triage_reason, triaged_at,
-  category (enum matching the good categories above + `politics` + `sports_live` +
-  `other`), is_political (bool), is_cowboys (bool)
+  category (enum: game, roster, injury, coaching, draft, off_field, fan, history,
+  `cowboys` as the catch-all, plus `politics` for auto-hiding and `other`),
+  is_political (bool), is_cowboys (bool)
 - Deep-read fields (stage 2, from the article): six dimensions each 1–5 — scale,
   consequence, proximity, share_trigger, shelf_life, novelty — plus dimension_notes
   (JSON, one justification per dimension quoting the article), key_facts (JSON list of
@@ -150,9 +162,9 @@ texas-news-curator/
    AP story appears everywhere while a real single-source scoop looks like nothing. It is
    passed to the prompts as context only, and used by triage to spot duplicates.
 3. **triage** (stage 1, Haiku) — batch all `new` stories (up to 40 per request).
-   Headline + feed summary only. Its job is to DISCARD, not to rank: politics, live
-   sports, national stories with no Texas angle, purely sensational crime, and obvious
-   duplicate coverage of the same event. Discards → `hidden` (with triage_reason, so
+   Headline + feed summary only. Its job is to DISCARD, not to rank: **anything not about
+   the Dallas Cowboys** (this rule does most of the work — several feeds are league-wide),
+   politics, shock-value stories, and obvious duplicate coverage of the same event. Discards → `hidden` (with triage_reason, so
    `/hidden/` explains itself); keeps → `triaged`. Owns category, is_political,
    is_cowboys.
 3b. **deep read** (stage 2, Sonnet) — for `triaged` stories, fetch the article, extract
@@ -207,10 +219,10 @@ never as a silent "0 scored".
 ### Triage prompt requirements (stage 1)
 - Output strict JSON array, one object per input story id: keep, triage_score (1–5),
   category, is_political, is_cowboys, reason.
-- Discard: political/partisan topics, border/immigration, elections, candidates,
-  culture-war, live game scores **for teams other than the Cowboys**, purely sensational
-  crime, national stories with no Texas angle, and duplicate coverage of an event already
-  kept. Cowboys live/breaking news is explicitly kept and categorised `cowboys`.
+- Discard: anything not about the Dallas Cowboys (including other NFL teams — a story
+  that merely name-drops the Cowboys is a discard), political/partisan topics,
+  shock-value stories, and duplicate coverage of an event already kept. Every Cowboys
+  story is kept, live game news and scores included.
 - `cluster_size` is passed as context only, and the prompt says so explicitly: it
   measures wire-service pickup, not importance, and must not be scored on.
 - Borderline stories survive to stage 2. Triage is a filter, not an editor.
@@ -218,15 +230,18 @@ never as a silent "0 scored".
 ### Deep-read prompt requirements (stage 2)
 - Six dimensions, each 1–5 against anchors written into the prompt — never an
   unanchored scale. Each needs a justification quoting the article.
-- Reward: statewide impact, weather/safety, human-interest, nostalgia, cost of living,
-  stories a 55-year-old Texan would share with family.
+- Reward: real news about this team — injuries, roster moves, trades, coaching and
+  front-office decisions, game outcomes and what they mean, and the history and nostalgia
+  a long-time fan enjoys.
+- `proximity` measures how directly a story is about the Cowboys (1 = league-wide news
+  merely mentioning them, 5 = purely a Cowboys story), NOT geography.
 - read_confidence is stated to the model as a measured fact, not requested from it.
 
 ### Generation prompt requirements
 - `post_title`: max 90 characters, plain, no clickbait, no emojis, no ALL CAPS.
 - `post_description`: 2–3 sentences, max ~300 characters, written in our own words
   (never copy sentences from the article), neutral reporting tone, ends with the
-  source name in the form "via Texas Tribune".
+  source name in the form "via Blogging The Boys".
 - Optional `reel_script`: ~90–110 words, calm narration, only when
   `GENERATE_REEL_SCRIPT=true`.
 
@@ -247,9 +262,11 @@ never as a silent "0 scored".
 
 - `/` — cards sorted by daily_rank (best first), then published_at desc.
   Default filters: status **"To post + posted"** (`current` — generated plus posted, so
-  the owner can see what is done and what is not; skipped and hidden stay out),
-  category **Cowboys**, images `with`, sort `rank`. Filters: category, source city,
-  status, images, date range. Show cluster_size as a "N sources" badge.
+  the owner can see what is done and what is not; skipped and hidden stay out), all
+  categories, images `with`, sort `rank`. Filters: category, status, images, date range.
+  There is deliberately no category default — every story is a Cowboys story, so
+  defaulting to the general `cowboys` bucket would hide everything filed under a specific
+  one. The City filter was removed; every source is now `dallas` or `other`. Show cluster_size as a "N sources" badge.
 - Each card: image thumbnail, post_title, post_description, source + city + time,
   a **rank badge** (`#1`; the six dimensions on hover, in full on the detail page),
   a `Headline only` chip when the site blocked the fetch, a green **Posted** badge once
@@ -260,9 +277,8 @@ never as a silent "0 scored".
   unhide do remove it — those mean "not this one".
 - `/story/<id>/` — full detail: the six dimensions with their quoted justifications,
   key_facts, read confidence, rank, score_reason, reel_script, raw feed data.
-- `/hidden/` — stories triage discarded (politics, non-Cowboys live sports, no Texas
-  angle, sensational crime, duplicates), each showing why, with an "unhide" button
-  (owner override). Unhide returns a story to `triaged` so stage 2 reads it properly.
+- `/hidden/` — stories triage discarded (not about the Cowboys, political, shock-value,
+  duplicates), each showing why, with an "unhide" button (owner override). Unhide returns a story to `triaged` so stage 2 reads it properly.
 - `/sources/` — manage sources (Django admin is acceptable for this).
 - Header is a single compact bar on every screen size: last-run status (with error
   flag) on the left, **Run now** + a round burger button on the right. The burger
@@ -289,27 +305,27 @@ never as a silent "0 scored".
   server push, so OS-permission problems can be told apart from delivery problems.
 - Needs HTTPS in production (localhost exempt). iPhone: only after Add to Home Screen.
 
-## Sources (seed data)
+## Sources
 
-Seed these via a data migration or fixture; the owner will adjust in admin.
-Verify each feed URL actually parses before committing the fixture.
+Seed new ones via a data migration; the owner adjusts in admin. Verify each feed URL
+actually parses, and measure its **publish rate**, before committing — entry count is
+misleading (see the rejected list below).
 
-- Texas Tribune (statewide)
-- Dallas Morning News (dallas)
-- Fort Worth Star-Telegram (fort_worth)
-- WFAA (dallas)
-- KSAT (san_antonio)
-- San Antonio Express-News (san_antonio)
-- KXAN (statewide/Austin)
-- KRIS / Caller-Times (corpus_christi)
-- KTSM / El Paso Times (el_paso)
-- National Weather Service Texas alerts (statewide)
-- Dallas Cowboys official site news (dallas, is_cowboys hint)
+**Live on production — the whole source list:**
+
+- Dallas Cowboys official site news (dallas, is_cowboys) — ~3.4/day
 - Blogging The Boys (dallas, is_cowboys) — highest rate, ~9/day; feed holds only 10 items
 - The Landry Hat (dallas, is_cowboys) — ~5.4/day
 - Inside The Star (dallas, is_cowboys) — ~2.4/day
 - Pro Football Rumors (other) — NFL-wide, ~1 story in 15 is Cowboys, but breaking
-  transactions land there first; the no-Texas-angle rule bins the rest
+  transactions land there first; the not-about-the-Cowboys rule bins the rest
+
+**Historical, deliberately absent from production.** Migration `0002_seed_sources` still
+seeds these and they still exist in the local dev database. They were deleted from
+production on purpose (see Target audience) — this is a record of what was there, NOT a
+list to reinstate: Texas Tribune, Dallas Morning News, Fort Worth Star-Telegram, WFAA,
+KSAT, San Antonio Express-News, KXAN, KRIS / Caller-Times, KTSM / El Paso Times, National
+Weather Service Texas alerts.
 
 Rejected after measuring publish rate (not entry count) on 2026-09-09: Google News and
 Reddit r/cowboys both return links our fetcher reads as 0 words; Sport DFW looked large

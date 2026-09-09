@@ -1,10 +1,9 @@
-# Texas News Curator
+# Tailgate Nation
 
-Self-hosted tool that pulls Texas news RSS feeds, reads the articles with Claude and
-ranks them against each other for a Texas / Dallas Cowboys Facebook page, then turns
-the top-ranked ones into ready-to-post title + description + image. The owner opens
-the dashboard, copies the text, downloads the image, and posts manually.
-See `CLAUDE.md` for the full spec.
+Self-hosted tool that pulls Dallas Cowboys RSS feeds, reads the articles with Claude and
+ranks them against each other, then turns the top-ranked ones into ready-to-post
+title + description + image. The owner opens the dashboard, copies the text, downloads
+the image, and posts to the Facebook page manually. See `CLAUDE.md` for the full spec.
 
 Scoring is a three-stage cascade — cheap headline triage, a Sonnet deep read of the
 survivors capped at 500 words, then a relative ranking pass. There is no absolute
@@ -16,7 +15,7 @@ score: `daily_rank` is the only thing that gates anything.
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env            # fill in ANTHROPIC_API_KEY
-python manage.py migrate        # SQLite by default; seeds the 11 Texas sources
+python manage.py migrate        # SQLite by default; seeds the source list
 python manage.py runserver      # http://127.0.0.1:8100  (port pinned in manage.py)
 python manage.py createsuperuser   # login for the dashboard and /admin/
 ```

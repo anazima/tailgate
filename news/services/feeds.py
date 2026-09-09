@@ -154,7 +154,7 @@ def fetch_source(source: Source) -> int:
     """
     created = 0
     try:
-        parsed = feedparser.parse(source.feed_url, agent="Mozilla/5.0 (compatible; TexasNewsCurator/1.0)")
+        parsed = feedparser.parse(source.feed_url, agent="Mozilla/5.0 (compatible; TailgateNation/1.0)")
         if parsed.bozo and not parsed.entries:
             raise ValueError(f"feed did not parse: {parsed.get('bozo_exception')}")
 

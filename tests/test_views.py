@@ -38,18 +38,16 @@ def test_dashboard_defaults_to_generated_and_sorts_by_score(client, source, make
 def test_dashboard_filters(client, source, other_source, make_story, generated) -> None:
     make_story(
         other_source,
-        "Dallas thing",
+        "Roster thing",
         status=StoryStatus.GENERATED,
-        category="food",
-        post_title="Dallas BBQ",
+        category="roster",
+        post_title="Cowboys sign a guard",
         image_file="stories/3.jpg",
     )
-    body = client.get(reverse("news:dashboard"), {"city": "dallas", "category": ""}).content.decode()
-    assert "Dallas BBQ" in body and "Storms sweep" not in body
-    body = client.get(reverse("news:dashboard"), {"category": "food"}).content.decode()
-    assert "Dallas BBQ" in body and "Storms sweep" not in body
+    body = client.get(reverse("news:dashboard"), {"category": "roster"}).content.decode()
+    assert "Cowboys sign a guard" in body and "Storms sweep" not in body
     body = client.get(reverse("news:dashboard"), {"status": "all", "category": ""}).content.decode()
-    assert "Dallas BBQ" in body and "Storms sweep" in body
+    assert "Cowboys sign a guard" in body and "Storms sweep" in body
 
 
 @pytest.mark.django_db
@@ -257,21 +255,22 @@ def test_story_detail_shows_the_dimensions_and_key_facts(client, source, make_st
 
 
 @pytest.mark.django_db
-def test_dashboard_opens_on_cowboys(client, source, make_story) -> None:
-    """The page leads with Cowboys; everything else is one dropdown away."""
+def test_dashboard_shows_every_cowboys_category_by_default(client, source, make_story) -> None:
+    """Every story is a Cowboys story, so defaulting to one bucket would hide the rest."""
     make_story(
-        source, "Cowboys sign lineman", status=StoryStatus.GENERATED, category="cowboys", image_file="s/1.jpg"
+        source, "Cowboys sign lineman", status=StoryStatus.GENERATED, category="roster", image_file="s/1.jpg"
     )
     make_story(
-        source, "Brisket festival", status=StoryStatus.GENERATED, category="food", image_file="s/2.jpg"
+        source, "Smith placed on IR", status=StoryStatus.GENERATED, category="injury", image_file="s/2.jpg"
     )
 
     default = client.get(reverse("news:dashboard")).content.decode()
     assert "Cowboys sign lineman" in default
-    assert "Brisket festival" not in default
+    assert "Smith placed on IR" in default
 
-    everything = client.get(reverse("news:dashboard"), {"category": ""}).content.decode()
-    assert "Brisket festival" in everything
+    only_injuries = client.get(reverse("news:dashboard"), {"category": "injury"}).content.decode()
+    assert "Smith placed on IR" in only_injuries
+    assert "Cowboys sign lineman" not in only_injuries
 
 
 @pytest.mark.django_db

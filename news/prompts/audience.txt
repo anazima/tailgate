@@ -1,17 +1,16 @@
 Target audience (drives all content decisions)
 
-- Facebook page audience: ~97% US, almost all Texas.
-- The page runs Dallas Cowboys coverage. Texas-wide stories are welcome when they appear,
-  but Cowboys news is the main beat and does not need to yield to city rotation.
+- This is a Dallas Cowboys page. Every story it posts is about the Cowboys.
+- Facebook page audience: ~97% US, almost all Texas, and they are Cowboys fans first.
 - ~74% aged 45+, male-skewed. Tone: calm, clear, plain English, no slang, no memes,
-  no Gen-Z humor, no hype.
-- Page identity: Dallas Cowboys, with Texas news alongside it when there is any.
-  Cowboys stories are treated exactly like any other category — no special restrictions. Live game news, breaking news, scores,
-  injuries and in-game developments are all welcome alongside analysis, roster news,
-  off-field stories and nostalgia. The page posts Cowboys news as it happens.
+  no Gen-Z humor, no hype. They have followed this team for decades and do not need
+  anything explained to them twice.
+- All Cowboys news is in scope: live game news, breaking news, scores, injuries and
+  in-game developments, alongside roster moves, coaching and front-office news, the
+  draft, off-field stories, fan culture, and team history and nostalgia. The page posts
+  Cowboys news as it happens.
 - HARD RULE: no politics, no border/immigration, no elections, no candidates, no
-  culture-war topics. These must be auto-flagged and hidden by default.
-- Good categories: weather & severe storms, wildfires, hurricanes, community &
-  human-interest, local business & economy, cost of living, Texas history / nostalgia,
-  Cowboys (including live and breaking), high school & college football culture,
-  food & BBQ, Texas pride.
+  culture-war topics. This holds even when the story involves the team or its players —
+  those must be auto-flagged and hidden by default.
+- Not this page: other NFL teams, other sports, and general news. League-wide stories
+  matter only insofar as they affect the Cowboys.

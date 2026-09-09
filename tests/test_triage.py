@@ -7,10 +7,10 @@ from news.services.triage import apply_triage
 @pytest.fixture
 def batch(source, make_story):
     return [
-        make_story(source, "Hard freeze warning for South Texas"),
+        make_story(source, "Cowboys place LT Tyler Smith on injured reserve"),
         make_story(source, "Governor spars with challenger over border bill"),
         make_story(source, "Cowboys 24, Eagles 17: final from Arlington"),
-        make_story(source, "Wire copy about a New Jersey zoning board"),
+        make_story(source, "Vikings add Jihad Ward to the practice squad"),
         make_story(source, "Malformed row"),
     ]
 
@@ -20,22 +20,22 @@ def kept(story_id: int, **overrides) -> dict:
         "id": story_id,
         "keep": True,
         "triage_score": 4,
-        "category": "weather",
+        "category": "injury",
         "is_political": False,
         "is_cowboys": False,
-        "reason": "Statewide safety information.",
+        "reason": "Starter injury before Week 1.",
     }
     return base | overrides
 
 
 @pytest.mark.django_db
 def test_apply_triage_keeps_and_discards(batch) -> None:
-    weather, politics, live, national, bad = batch
+    injury, politics, live, other_team, bad = batch
     results = [
-        kept(weather.id),
+        kept(injury.id),
         kept(politics.id, keep=False, category="politics", is_political=True, reason="Political."),
-        kept(live.id, keep=False, category="sports_live", is_cowboys=True, reason="Live score."),
-        kept(national.id, keep=False, category="other", reason="No Texas angle."),
+        kept(live.id, keep=True, category="game", is_cowboys=True, reason="Cowboys game result."),
+        kept(other_team.id, keep=False, category="other", reason="Not about the Cowboys."),
         {"id": bad.id, "keep": "yes please", "triage_score": "high"},  # malformed
         {"id": 999999, "keep": True},  # unknown id
         "not an object",  # non-dict
@@ -46,13 +46,13 @@ def test_apply_triage_keeps_and_discards(batch) -> None:
         story.refresh_from_db()
 
     assert updated == 4
-    assert weather.status == StoryStatus.TRIAGED
-    assert weather.triage_score == 4
-    assert weather.category == Category.WEATHER
+    assert injury.status == StoryStatus.TRIAGED
+    assert injury.triage_score == 4
+    assert injury.category == Category.INJURY
     assert politics.status == StoryStatus.HIDDEN
-    assert live.status == StoryStatus.HIDDEN
-    assert national.status == StoryStatus.HIDDEN
-    assert national.triage_reason == "No Texas angle."
+    assert live.status == StoryStatus.TRIAGED, "Cowboys live game news is the page now"
+    assert other_team.status == StoryStatus.HIDDEN
+    assert other_team.triage_reason == "Not about the Cowboys."
     # One bad row must never sink the batch.
     assert bad.status == StoryStatus.NEW
     assert bad.triage_score is None
@@ -68,11 +68,13 @@ def test_a_political_story_is_hidden_even_if_the_model_says_keep(batch) -> None:
 
 
 @pytest.mark.django_db
-def test_a_live_sports_category_is_hidden_even_if_kept(batch) -> None:
+def test_a_cowboys_live_game_story_is_kept(batch) -> None:
+    """The rule that binned live sport is gone — live Cowboys news is the whole point now."""
     story = batch[0]
-    apply_triage([story], [kept(story.id, keep=True, category="sports_live")])
+    apply_triage([story], [kept(story.id, keep=True, category="game", is_cowboys=True)])
     story.refresh_from_db()
-    assert story.status == StoryStatus.HIDDEN
+    assert story.status == StoryStatus.TRIAGED
+    assert story.category == Category.GAME
 
 
 @pytest.mark.django_db
@@ -98,3 +100,16 @@ def test_triage_never_touches_the_deep_read_fields(batch) -> None:
     assert story.scale is None
     assert story.key_facts == []
     assert story.scored_at is None
+
+
+@pytest.mark.django_db
+def test_a_story_about_another_nfl_team_is_discarded(batch) -> None:
+    """The main new rule. Pro Football Rumors is league-wide and most of it belongs here."""
+    story = batch[0]
+    apply_triage(
+        [story],
+        [kept(story.id, keep=False, category="other", is_cowboys=False, reason="Not about the Cowboys.")],
+    )
+    story.refresh_from_db()
+    assert story.status == StoryStatus.HIDDEN
+    assert story.triage_reason == "Not about the Cowboys."

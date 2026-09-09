@@ -2,7 +2,7 @@
 self.addEventListener("push", (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch (e) { data = { body: event.data && event.data.text() }; }
-  const title = data.title || "Texas News Curator";
+  const title = data.title || "Tailgate Nation";
   const options = {
     body: data.body || "",
     tag: data.tag || undefined,

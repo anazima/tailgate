@@ -19,8 +19,10 @@ BATCH_SIZE = 40
 
 VALID_CATEGORIES = {c.value for c in Category}
 
-# Categories that are hidden on sight, regardless of what the model set on "keep".
-BANNED_CATEGORIES = (Category.POLITICS, Category.SPORTS_LIVE)
+# Hidden on sight, whatever the model set on "keep". Live sport is no longer here:
+# a Cowboys page wants live game news, and non-Cowboys sport is discarded for not being
+# about the Cowboys rather than for being live.
+BANNED_CATEGORIES = (Category.POLITICS,)
 
 
 def _story_payload(story: Story) -> dict:

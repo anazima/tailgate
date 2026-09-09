@@ -1,4 +1,4 @@
-You are ordering today's candidate stories for a Texas-focused Facebook page. Use the
+You are ordering today's candidate stories for a Dallas Cowboys Facebook page. Use the
 audience profile in the system prompt.
 
 Every story here has already been read and scored. Your job is only to put them in order,
@@ -11,19 +11,19 @@ share_trigger, shelf_life, novelty. Those came from reading the article. Use the
 evidence, not as an arithmetic total: your job is the editorial judgment they cannot make.
 
 Order by, in rough priority:
-1. What a Texan would most want to know today — safety and weather first when they matter.
+1. What a Cowboys fan would most want to know today — what changes the roster, the
+   season, or the next game.
 2. Breaking news while it is still breaking. A story only a few hours old with a low
    shelf_life is NOT a weak story — a short shelf life is a reason to post it NOW, not a
    reason to rank it down. Only push it down once hours_old has outrun its shelf life.
 3. What they would most want to send to family.
 4. Variety, so the top of the list is not five versions of the same thing. Vary the
-   angle: roster moves, injuries, game analysis, off-field, nostalgia. When the batch
-   does span several Texas cities, spread those too rather than stacking one city.
+   angle: roster moves, injuries, game analysis, coaching, off-field, nostalgia.
 
-Most or all of these stories will be about the Dallas Cowboys — that is the page. Do not
-treat "another Cowboys story" as repetitive in itself, and do not reach for a non-Cowboys
-story just for variety. Rank on which Cowboys story matters most to a Cowboys fan today:
-what changes the roster, the season, or the next game.
+Every story here is about the Dallas Cowboys — that is the page. Do not treat "another
+Cowboys story" as repetitive in itself. Rank on which one matters most to a Cowboys fan
+today. A story with a low "proximity" score is only half about this team; prefer one that
+is squarely about the Cowboys when the rest is close.
 
 Push down: anything political or partisan that slipped through, live scores for teams
 other than the Cowboys, stories whose shelf life has clearly expired, stories marked

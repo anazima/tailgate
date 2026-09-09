@@ -1,5 +1,5 @@
 [Unit]
-Description=Texas News Curator pipeline run (tailgate.retoph.com)
+Description=Tailgate Nation pipeline run (tailgate.retoph.com)
 After=network-online.target postgresql.service
 
 [Service]

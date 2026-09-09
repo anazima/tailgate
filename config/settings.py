@@ -1,4 +1,4 @@
-"""Django settings for the Texas News Curator."""
+"""Django settings for Tailgate Nation."""
 
 import os
 from pathlib import Path

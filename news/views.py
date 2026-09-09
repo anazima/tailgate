@@ -15,7 +15,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
-from news.models import Category, City, Performance, PipelineRun, PushSubscription, Story, StoryStatus
+from news.models import Category, Performance, PipelineRun, PushSubscription, Story, StoryStatus
 from news.services import push
 
 logger = logging.getLogger(__name__)
@@ -26,8 +26,9 @@ logger = logging.getLogger(__name__)
 CURRENT_STATUS = "current"
 CURRENT_STATUSES = (StoryStatus.GENERATED, StoryStatus.POSTED)
 DEFAULT_STATUS = CURRENT_STATUS
-# The dashboard opens on Cowboys; everything else is one dropdown away.
-DEFAULT_CATEGORY = Category.COWBOYS
+# No category default. Every story is a Cowboys story now, so defaulting to the general
+# `cowboys` bucket would hide everything filed under injury, roster or game.
+DEFAULT_CATEGORY = ""
 
 
 def _last_run() -> PipelineRun | None:
@@ -71,7 +72,6 @@ def _apply_filters(request: HttpRequest, stories: QuerySet[Story]) -> tuple[Quer
     filters = {
         "status": request.GET.get("status", DEFAULT_STATUS),
         "category": request.GET.get("category", DEFAULT_CATEGORY),
-        "city": request.GET.get("city", ""),
         "date_from": request.GET.get("date_from", ""),
         "date_to": request.GET.get("date_to", ""),
         "images": request.GET.get("images", "with"),
@@ -85,8 +85,6 @@ def _apply_filters(request: HttpRequest, stories: QuerySet[Story]) -> tuple[Quer
         stories = stories.filter(status=filters["status"])
     if filters["category"]:
         stories = stories.filter(category=filters["category"])
-    if filters["city"]:
-        stories = stories.filter(source__city=filters["city"])
     if (start := _parse_date(filters["date_from"])) is not None:
         stories = stories.filter(published_at__date__gte=start.date())
     if (end := _parse_date(filters["date_to"])) is not None:
@@ -105,8 +103,7 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         "stories": stories,
         "filters": filters,
         "statuses": StoryStatus.choices,
-        "categories": [c for c in Category.choices if c[0] not in (Category.POLITICS, Category.SPORTS_LIVE)],
-        "cities": City.choices,
+        "categories": [c for c in Category.choices if c[0] != Category.POLITICS],
         **_pipeline_context(),
     }
     return render(request, "news/dashboard.html", context)
@@ -266,5 +263,5 @@ def push_unsubscribe(request: HttpRequest) -> HttpResponse:
 
 @require_POST
 def push_test(request: HttpRequest) -> HttpResponse:
-    sent = push.notify("Texas News Curator", "Test notification — push is working.", url="/", tag="test")
+    sent = push.notify("Tailgate Nation", "Test notification — push is working.", url="/", tag="test")
     return HttpResponse(f"Sent to {sent} device{'s' if sent != 1 else ''}.")

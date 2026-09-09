@@ -16,19 +16,23 @@ class City(models.TextChoices):
 
 
 class Category(models.TextChoices):
-    WEATHER = "weather", "Weather & Severe Storms"
-    WILDFIRES = "wildfires", "Wildfires"
-    HURRICANES = "hurricanes", "Hurricanes"
-    COMMUNITY = "community", "Community & Human Interest"
-    BUSINESS = "business", "Local Business & Economy"
-    COST_OF_LIVING = "cost_of_living", "Cost of Living"
-    HISTORY = "history", "Texas History / Nostalgia"
-    COWBOYS = "cowboys", "Cowboys"
-    FOOTBALL_CULTURE = "football_culture", "HS & College Football Culture"
-    FOOD = "food", "Food & BBQ"
-    TEXAS_PRIDE = "texas_pride", "Texas Pride"
+    """What a Cowboys story is about.
+
+    `COWBOYS` is the catch-all for anything that does not fit a specific bucket, and is
+    also what every story carried over from the Texas-news era holds — keeping the key
+    means those rows still render a real label rather than a blank one.
+    """
+
+    GAME = "game", "Game & Matchups"
+    ROSTER = "roster", "Roster Moves"
+    INJURY = "injury", "Injuries"
+    COACHING = "coaching", "Coaching & Front Office"
+    DRAFT = "draft", "Draft & Prospects"
+    OFF_FIELD = "off_field", "Off the Field"
+    FAN = "fan", "Fan Culture"
+    HISTORY = "history", "History & Nostalgia"
+    COWBOYS = "cowboys", "Cowboys (general)"
     POLITICS = "politics", "Politics (Hidden)"
-    SPORTS_LIVE = "sports_live", "Live Sports (Hidden)"
     OTHER = "other", "Other"
 
 
@@ -106,16 +110,16 @@ class Story(models.Model):
 
     # Stage 2 deep read — six dimensions, each 1-5 against anchors written into the prompt.
     scale = models.PositiveSmallIntegerField(
-        null=True, blank=True, help_text="1-5: how many Texans this affects, and where."
+        null=True, blank=True, help_text="1-5: how much of the team or season this touches."
     )
     consequence = models.PositiveSmallIntegerField(
-        null=True, blank=True, help_text="1-5: does this change money, safety or plans."
+        null=True, blank=True, help_text="1-5: does this change the roster, the season or the next game."
     )
     proximity = models.PositiveSmallIntegerField(
-        null=True, blank=True, help_text="1-5: closeness to the five target cities."
+        null=True, blank=True, help_text="1-5: how directly this is about the Cowboys."
     )
     share_trigger = models.PositiveSmallIntegerField(
-        null=True, blank=True, help_text="1-5: why a 55-year-old sends it to family."
+        null=True, blank=True, help_text="1-5: why a Cowboys fan sends it to another fan."
     )
     shelf_life = models.PositiveSmallIntegerField(
         null=True, blank=True, help_text="1-5: still worth posting in 12 hours."

@@ -2,7 +2,7 @@
 {% block title %}Hidden stories{% endblock %}
 {% block content %}
 <h1 class="text-xl font-semibold mb-1">Hidden stories</h1>
-<p class="text-sm text-stone-500 mb-5">Auto-hidden as political or live sports. Unhide to allow generation on the next run.</p>
+<p class="text-sm text-stone-500 mb-5">Discarded at triage — not about the Cowboys, political, or duplicate coverage. Unhide to send a story back for a full read.</p>
 {% if stories %}
 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
   {% for story in stories %}{% include "news/_card.html" %}{% endfor %}

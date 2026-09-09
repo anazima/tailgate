@@ -1,7 +1,7 @@
 <!doctype html>
 {% load static %}
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Log in — Texas News Curator</title>
+<title>Log in — Tailgate Nation</title>
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'news/favicon-32.png' %}">
 <link rel="shortcut icon" href="{% static 'news/favicon.ico' %}">
 <link rel="apple-touch-icon" href="{% static 'news/apple-touch-icon.png' %}">
@@ -12,7 +12,7 @@
 <form method="post" class="bg-white border border-stone-200 rounded-lg p-6 w-80 flex flex-col gap-3">
   {% csrf_token %}
   <input type="hidden" name="next" value="{{ next }}">
-  <h1 class="font-semibold text-lg">Texas News Curator</h1>
+  <h1 class="font-semibold text-lg">Tailgate Nation</h1>
   {% if error %}<p class="text-sm text-red-700">{{ error }}</p>{% endif %}
   <input type="text" name="username" placeholder="Username" autofocus autocomplete="username" class="border rounded px-3 py-2">
   <input type="password" name="password" placeholder="Password" autocomplete="current-password" class="border rounded px-3 py-2">

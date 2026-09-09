@@ -21,14 +21,6 @@
       {% endfor %}
     </select>
   </label>
-  <label class="flex flex-col gap-1">City
-    <select name="city" class="border rounded px-2 py-1">
-      <option value="">Any</option>
-      {% for value, label in cities %}
-        <option value="{{ value }}" {% if filters.city == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </label>
   <label class="flex flex-col gap-1">Images
     <select name="images" class="border rounded px-2 py-1">
       <option value="with" {% if filters.images == "with" %}selected{% endif %}>With image</option>
