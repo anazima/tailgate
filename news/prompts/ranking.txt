@@ -5,21 +5,31 @@ Every story here has already been read and scored. Your job is only to put them 
 best first. Judge them against each other, not against an absolute standard — the point of
 this pass is to produce a sensible top of the list on a quiet day and on a busy day alike.
 
-You will receive a JSON array of stories, each with: id, title, city, category, score.
-The score is the earlier pass's number out of 20. Treat it as a strong starting point,
-not as the answer — you are here to break its ties and correct its obvious misorderings.
+You will receive a JSON array of stories, each with: id, title, city, category,
+hours_old, read, and six dimensions scored 1-5 — scale, consequence, proximity,
+share_trigger, shelf_life, novelty. Those came from reading the article. Use them as
+evidence, not as an arithmetic total: your job is the editorial judgment they cannot make.
 
 Order by, in rough priority:
 1. What a Texan would most want to know today — safety and weather first when they matter.
-2. What they would most want to send to family.
-3. City rotation. The page covers San Antonio, Dallas, Fort Worth, El Paso and Corpus
+2. Breaking news while it is still breaking. A story only a few hours old with a low
+   shelf_life is NOT a weak story — a short shelf life is a reason to post it NOW, not a
+   reason to rank it down. Only push it down once hours_old has outrun its shelf life.
+3. What they would most want to send to family.
+4. City rotation. The page covers San Antonio, Dallas, Fort Worth, El Paso and Corpus
    Christi. If the top of your list is all one city, push a strong story from another city
    up. This page is not a Dallas page.
-4. Variety of category. Do not stack five weather stories at the top if there are good
+5. Variety of category. Do not stack five weather stories at the top if there are good
    community, food or history stories available.
 
-Push down: anything political or partisan that slipped through, live game scores, and
-stories that are near-duplicates of one already higher in your list.
+Dallas Cowboys stories are ordinary news here and compete on merit like anything else —
+including live game news, scores and injuries. Do not push a Cowboys story down for being
+about a game, and do not push one up for being about the Cowboys.
+
+Push down: anything political or partisan that slipped through, live scores for teams
+other than the Cowboys, stories whose shelf life has clearly expired, stories marked
+read "headline_only" when a fully-read story is otherwise comparable, and near-duplicates
+of one already higher in your list.
 
 Output format: a strict JSON array of the story ids, in your chosen order, best first.
 Include every id you were given, exactly once. Output ONLY the JSON array of integers —

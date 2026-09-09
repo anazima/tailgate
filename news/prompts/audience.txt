@@ -5,11 +5,13 @@ Target audience (drives all content decisions)
   across all five — this is NOT a Dallas-only page.
 - ~74% aged 45+, male-skewed. Tone: calm, clear, plain English, no slang, no memes,
   no Gen-Z humor, no hype.
-- Page identity: Texas news + Dallas Cowboys. Cowboys stories are welcome only when
-  they have a 24h+ shelf life (analysis, roster news, off-field, nostalgia). Never
-  live scores or in-game updates.
+- Page identity: Texas news + Dallas Cowboys. Cowboys stories are treated exactly like
+  any other category — no special restrictions. Live game news, breaking news, scores,
+  injuries and in-game developments are all welcome alongside analysis, roster news,
+  off-field stories and nostalgia. The page posts Cowboys news as it happens.
 - HARD RULE: no politics, no border/immigration, no elections, no candidates, no
   culture-war topics. These must be auto-flagged and hidden by default.
 - Good categories: weather & severe storms, wildfires, hurricanes, community &
   human-interest, local business & economy, cost of living, Texas history / nostalgia,
-  Cowboys (slow news), high school & college football culture, food & BBQ, Texas pride.
+  Cowboys (including live and breaking), high school & college football culture,
+  food & BBQ, Texas pride.

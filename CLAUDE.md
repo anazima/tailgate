@@ -20,14 +20,16 @@ boring, and reliable. Auth is a single Django user (same login for the dashboard
   across all five — this is NOT a Dallas-only page.
 - ~74% aged 45+, male-skewed. Tone: calm, clear, plain English, no slang, no memes,
   no Gen-Z humor, no hype.
-- Page identity: Texas news + Dallas Cowboys. Cowboys stories are welcome only when
-  they have a 24h+ shelf life (analysis, roster news, off-field, nostalgia). Never
-  live scores or in-game updates.
+- Page identity: Texas news + Dallas Cowboys. Cowboys stories are treated exactly like
+  any other category — no special restrictions. Live game news, breaking news, scores,
+  injuries and in-game developments are all welcome alongside analysis, roster news,
+  off-field stories and nostalgia. The page posts Cowboys news as it happens.
 - HARD RULE: no politics, no border/immigration, no elections, no candidates, no
   culture-war topics. These must be auto-flagged and hidden by default.
 - Good categories: weather & severe storms, wildfires, hurricanes, community &
   human-interest, local business & economy, cost of living, Texas history / nostalgia,
-  Cowboys (slow news), high school & college football culture, food & BBQ, Texas pride.
+  Cowboys (including live and breaking), high school & college football culture,
+  food & BBQ, Texas pride.
 
 ## Stack
 
@@ -113,7 +115,9 @@ texas-news-curator/
   3–5 facts), read_confidence (`full` / `partial` / `headline_only`), article_words,
   score_reason, analysed_at, scored_at
 - **There is no numeric score.** The six dimensions feed the ranking pass, and
-  `daily_rank` is the only thing that gates anything. There is deliberately no second,
+  `daily_rank` is the only thing that gates anything. The ranker sees `hours_old`, so
+  breaking news is not penalised for its short `shelf_life` — a short shelf life is a
+  reason to post now, not a reason to rank down. There is deliberately no second,
   absolute scale competing with it.
 - Ranking + feedback: daily_rank, ranked_at, performance (`well` / `poorly`), performance_at
 - Generated fields (nullable until generated): post_title, post_description,
@@ -198,8 +202,9 @@ never as a silent "0 scored".
 - Output strict JSON array, one object per input story id: keep, triage_score (1–5),
   category, is_political, is_cowboys, reason.
 - Discard: political/partisan topics, border/immigration, elections, candidates,
-  culture-war, live game scores, purely sensational crime, national stories with no
-  Texas angle, and duplicate coverage of an event already kept.
+  culture-war, live game scores **for teams other than the Cowboys**, purely sensational
+  crime, national stories with no Texas angle, and duplicate coverage of an event already
+  kept. Cowboys live/breaking news is explicitly kept and categorised `cowboys`.
 - `cluster_size` is passed as context only, and the prompt says so explicitly: it
   measures wire-service pickup, not importance, and must not be scored on.
 - Borderline stories survive to stage 2. Triage is a filter, not an editor.
@@ -285,6 +290,8 @@ Verify each feed URL actually parses before committing the fixture.
 - KTSM / El Paso Times (el_paso)
 - National Weather Service Texas alerts (statewide)
 - Dallas Cowboys official site news (dallas, is_cowboys hint)
+- Blogging The Boys (dallas, is_cowboys)
+- Inside The Star (dallas, is_cowboys)
 
 ## Conventions
 

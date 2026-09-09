@@ -28,6 +28,7 @@ def _story_payload(story: Story) -> dict:
         "city": story.source.city,
         "category": story.category,
         "read": story.read_confidence,
+        "hours_old": round((timezone.now() - story.published_at).total_seconds() / 3600, 1),
     }
     payload.update({field: getattr(story, field) for field in analysis.DIMENSIONS})
     return payload

@@ -23,7 +23,7 @@ class Category(models.TextChoices):
     BUSINESS = "business", "Local Business & Economy"
     COST_OF_LIVING = "cost_of_living", "Cost of Living"
     HISTORY = "history", "Texas History / Nostalgia"
-    COWBOYS = "cowboys", "Cowboys (Slow News)"
+    COWBOYS = "cowboys", "Cowboys"
     FOOTBALL_CULTURE = "football_culture", "HS & College Football Culture"
     FOOD = "food", "Food & BBQ"
     TEXAS_PRIDE = "texas_pride", "Texas Pride"

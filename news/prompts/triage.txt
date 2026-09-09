@@ -30,8 +30,11 @@ For EACH story, output one JSON object with exactly these fields:
 DISCARD (set "keep": false) when the story is:
 - political or partisan in any way — politics, border/immigration, elections, candidates,
   culture-war topics. This is a hard rule with no exceptions.
-- a live game score, an in-game update, or a match result (category "sports_live").
-  Cowboys analysis, roster news, off-field stories and nostalgia are NOT this — keep those.
+- a live game score, an in-game update, or a match result for any team OTHER than the
+  Dallas Cowboys (category "sports_live").
+  DALLAS COWBOYS ARE THE EXCEPTION: keep every Cowboys story, including live game news,
+  breaking news, scores, injuries and in-game developments. Category them "cowboys",
+  never "sports_live". The page posts Cowboys news as it happens.
 - a national story with no Texas angle.
 - crime reported purely for shock value, with no community relevance or safety information.
 

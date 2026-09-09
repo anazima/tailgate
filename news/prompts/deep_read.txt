@@ -41,7 +41,9 @@ For EACH story, output one JSON object with exactly these fields:
     3 = mildly interesting, they might mention it
     5 = they would forward it the moment they read it
 
-  "shelf_life" — will this still be worth posting in 12 hours? The page posts once a day.
+  "shelf_life" — how long this stays worth posting. This measures durability only; it is
+    NOT a judgment of whether the story matters. Breaking news is often a 1 and still the
+    most important thing on the page — the ranking pass weighs freshness against this.
     1 = worthless within the hour
     3 = still good tomorrow morning
     5 = good for weeks
