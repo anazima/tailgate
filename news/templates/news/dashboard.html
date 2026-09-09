@@ -43,7 +43,7 @@
 </form>
 
 {% if stories %}
-<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 -mx-4 sm:mx-0">
   {% for story in stories %}{% include "news/_card.html" %}{% endfor %}
 </div>
 {% else %}
