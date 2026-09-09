@@ -299,8 +299,17 @@ Verify each feed URL actually parses before committing the fixture.
 - KTSM / El Paso Times (el_paso)
 - National Weather Service Texas alerts (statewide)
 - Dallas Cowboys official site news (dallas, is_cowboys hint)
-- Blogging The Boys (dallas, is_cowboys)
-- Inside The Star (dallas, is_cowboys)
+- Blogging The Boys (dallas, is_cowboys) — highest rate, ~9/day; feed holds only 10 items
+- The Landry Hat (dallas, is_cowboys) — ~5.4/day
+- Inside The Star (dallas, is_cowboys) — ~2.4/day
+- Pro Football Rumors (other) — NFL-wide, ~1 story in 15 is Cowboys, but breaking
+  transactions land there first; the no-Texas-angle rule bins the rest
+
+Rejected after measuring publish rate (not entry count) on 2026-09-09: Google News and
+Reddit r/cowboys both return links our fetcher reads as 0 words; Sport DFW looked large
+at 90 entries but publishes 0.1/day; ESPN, NFL.com, Yahoo, CBS, 247Sports, SI, Bleacher
+Report, Cowboys Wire and a dozen others return no entries at all. There is no faster
+Cowboys-only RSS feed than the four above — real-time Cowboys news lives on X, not RSS.
 
 ## Conventions
 
