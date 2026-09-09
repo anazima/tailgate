@@ -27,7 +27,7 @@ def test_dashboard_defaults_to_generated_and_sorts_by_score(client, source, make
         image_file="stories/2.jpg",
     )
     make_story(source, "Scored only", status=StoryStatus.SCORED)
-    resp = client.get(reverse("news:dashboard"))
+    resp = client.get(reverse("news:dashboard"), {"category": ""})
     body = resp.content.decode()
     assert resp.status_code == 200
     assert "Scored only" not in body
@@ -44,11 +44,11 @@ def test_dashboard_filters(client, source, other_source, make_story, generated) 
         post_title="Dallas BBQ",
         image_file="stories/3.jpg",
     )
-    body = client.get(reverse("news:dashboard"), {"city": "dallas"}).content.decode()
+    body = client.get(reverse("news:dashboard"), {"city": "dallas", "category": ""}).content.decode()
     assert "Dallas BBQ" in body and "Storms sweep" not in body
     body = client.get(reverse("news:dashboard"), {"category": "food"}).content.decode()
     assert "Dallas BBQ" in body and "Storms sweep" not in body
-    body = client.get(reverse("news:dashboard"), {"status": "all"}).content.decode()
+    body = client.get(reverse("news:dashboard"), {"status": "all", "category": ""}).content.decode()
     assert "Dallas BBQ" in body and "Storms sweep" in body
 
 
@@ -166,8 +166,11 @@ def test_run_pipeline_reports_missing_api_key(monkeypatch, settings) -> None:
 @pytest.mark.django_db
 def test_dashboard_hides_stories_without_image_by_default(client, source, make_story, generated) -> None:
     make_story(source, "No pic", status=StoryStatus.GENERATED, post_title="Imageless")
-    assert "Imageless" not in client.get(reverse("news:dashboard")).content.decode()
-    assert "Imageless" in client.get(reverse("news:dashboard"), {"images": "all"}).content.decode()
+    assert "Imageless" not in client.get(reverse("news:dashboard"), {"category": ""}).content.decode()
+    assert (
+        "Imageless"
+        in client.get(reverse("news:dashboard"), {"images": "all", "category": ""}).content.decode()
+    )
 
 
 @pytest.mark.django_db
@@ -217,7 +220,7 @@ def test_dashboard_can_sort_by_rank(client, source, make_story) -> None:
         daily_rank=1,
         ranked_at=timezone.now(),
     )
-    response = client.get(reverse("news:dashboard"), {"sort": "rank", "images": "all"})
+    response = client.get(reverse("news:dashboard"), {"sort": "rank", "images": "all", "category": ""})
     body = response.content.decode()
 
     assert response.status_code == 200
@@ -250,3 +253,21 @@ def test_story_detail_shows_the_dimensions_and_key_facts(client, source, make_st
     assert "pipes may burst overnight" in body
     assert "Four warming centers open." in body
     assert "Headline only" in body
+
+
+@pytest.mark.django_db
+def test_dashboard_opens_on_cowboys(client, source, make_story) -> None:
+    """The page leads with Cowboys; everything else is one dropdown away."""
+    make_story(
+        source, "Cowboys sign lineman", status=StoryStatus.GENERATED, category="cowboys", image_file="s/1.jpg"
+    )
+    make_story(
+        source, "Brisket festival", status=StoryStatus.GENERATED, category="food", image_file="s/2.jpg"
+    )
+
+    default = client.get(reverse("news:dashboard")).content.decode()
+    assert "Cowboys sign lineman" in default
+    assert "Brisket festival" not in default
+
+    everything = client.get(reverse("news:dashboard"), {"category": ""}).content.decode()
+    assert "Brisket festival" in everything

@@ -21,6 +21,8 @@ from news.services import push
 logger = logging.getLogger(__name__)
 
 DEFAULT_STATUS = StoryStatus.GENERATED
+# The dashboard opens on Cowboys; everything else is one dropdown away.
+DEFAULT_CATEGORY = Category.COWBOYS
 
 
 def _last_run() -> PipelineRun | None:
@@ -63,7 +65,7 @@ def _ranked() -> QuerySet[Story]:
 def _apply_filters(request: HttpRequest, stories: QuerySet[Story]) -> tuple[QuerySet[Story], dict]:
     filters = {
         "status": request.GET.get("status", DEFAULT_STATUS),
-        "category": request.GET.get("category", ""),
+        "category": request.GET.get("category", DEFAULT_CATEGORY),
         "city": request.GET.get("city", ""),
         "date_from": request.GET.get("date_from", ""),
         "date_to": request.GET.get("date_to", ""),
