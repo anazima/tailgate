@@ -16,12 +16,18 @@ boring, and reliable. Auth is a single Django user (same login for the dashboard
 ## Target audience (drives all content decisions)
 
 - Facebook page audience: ~97% US, almost all Texas.
-- Top cities: San Antonio, Dallas, Fort Worth, El Paso, Corpus Christi. Rotate coverage
-  across all five — this is NOT a Dallas-only page.
+- The page runs Dallas Cowboys coverage. Texas-wide stories are welcome when they appear,
+  but Cowboys news is the main beat and does not need to yield to city rotation.
+- **Production runs Cowboys-only, deliberately.** As of 2026-09-09 the owner removed every
+  Texas news source from the production database, leaving the four Cowboys feeds plus
+  Pro Football Rumors. The Texas sources are still seeded by migration 0002 and still
+  exist in the local dev database — do NOT "restore" them on production; that was a
+  decision, not a fault. The five-city machinery (City enum, city filter, rotation
+  wording in the prompts) is kept so it still works if Texas sources are ever re-added.
 - ~74% aged 45+, male-skewed. Tone: calm, clear, plain English, no slang, no memes,
   no Gen-Z humor, no hype.
-- Page identity: Texas news + Dallas Cowboys. Cowboys stories are treated exactly like
-  any other category — no special restrictions. Live game news, breaking news, scores,
+- Page identity: Dallas Cowboys, with Texas news alongside it when there is any.
+  Cowboys stories are treated exactly like any other category — no special restrictions. Live game news, breaking news, scores,
   injuries and in-game developments are all welcome alongside analysis, roster news,
   off-field stories and nostalgia. The page posts Cowboys news as it happens.
 - HARD RULE: no politics, no border/immigration, no elections, no candidates, no
