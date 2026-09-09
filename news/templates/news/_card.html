@@ -16,23 +16,6 @@
   </div>
 
   <div class="p-4 flex flex-col gap-2 grow">
-    <div class="flex flex-wrap gap-1 text-xs">
-      {% if story.daily_rank and story.rank_is_fresh %}<span class="bg-stone-900 text-white font-semibold px-2 py-0.5 rounded"
-        title="Best of the recent stories, judged against each other. Scale {{ story.scale }}, consequence {{ story.consequence }}, proximity {{ story.proximity }}, share trigger {{ story.share_trigger }}, shelf life {{ story.shelf_life }}, novelty {{ story.novelty }} — each out of 5.">#{{ story.daily_rank }}</span>
-      {% elif story.triage_reason and not story.analysed_at %}<span class="bg-stone-200 text-stone-600 px-2 py-0.5 rounded"
-        title="Discarded before it was read">{{ story.triage_reason|truncatechars:60 }}</span>{% endif %}
-      {% if story.read_confidence == "headline_only" %}<span class="bg-stone-200 text-stone-600 px-2 py-0.5 rounded"
-        title="This site blocked our fetch, so this was judged from the headline alone">Headline only</span>{% endif %}
-      {% if story.category %}<span class="bg-stone-100 text-stone-700 px-2 py-0.5 rounded">{{ story.get_category_display }}</span>{% endif %}
-      {% if story.is_cowboys %}<span class="bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded">Cowboys</span>{% endif %}
-      {% if story.status == "posted" %}
-        <span class="ml-auto bg-green-600 text-white font-semibold px-2 py-0.5 rounded"
-              title="Posted {{ story.posted_at }}">Posted</span>
-      {% else %}
-        <span class="ml-auto text-stone-500 uppercase">{{ story.get_status_display }}</span>
-      {% endif %}
-    </div>
-
     <h2 class="font-semibold leading-snug">
       <a href="{% url 'news:story_detail' story.id %}" class="hover:underline">{{ story.post_title|default:story.title }}</a>
     </h2>
@@ -41,6 +24,22 @@
     {% elif story.summary %}
       <p class="text-sm text-stone-500">{{ story.summary|truncatechars:220 }}</p>
     {% endif %}
+
+    <div class="flex flex-wrap gap-1 text-xs">
+      {% if story.daily_rank and story.rank_is_fresh %}<span class="bg-stone-900 text-white font-semibold px-2 py-0.5 rounded"
+        title="Best of the recent stories, judged against each other. Scale {{ story.scale }}, consequence {{ story.consequence }}, proximity {{ story.proximity }}, share trigger {{ story.share_trigger }}, shelf life {{ story.shelf_life }}, novelty {{ story.novelty }} — each out of 5.">#{{ story.daily_rank }}</span>
+      {% elif story.triage_reason and not story.analysed_at %}<span class="bg-stone-200 text-stone-600 px-2 py-0.5 rounded"
+        title="Discarded before it was read">{{ story.triage_reason|truncatechars:60 }}</span>{% endif %}
+      {% if story.read_confidence == "headline_only" %}<span class="bg-stone-200 text-stone-600 px-2 py-0.5 rounded"
+        title="This site blocked our fetch, so this was judged from the headline alone">Headline only</span>{% endif %}
+      {% if story.category %}<span class="bg-stone-100 text-stone-700 px-2 py-0.5 rounded">{{ story.get_category_display }}</span>{% endif %}
+      {% if story.status == "posted" %}
+        <span class="ml-auto bg-green-600 text-white font-semibold px-2 py-0.5 rounded"
+              title="Posted {{ story.posted_at }}">Posted</span>
+      {% else %}
+        <span class="ml-auto text-stone-500 uppercase">{{ story.get_status_display }}</span>
+      {% endif %}
+    </div>
 
     <p class="text-xs text-stone-500 mt-auto pt-2">
       {{ story.source.name }} · {{ story.source.get_city_display }} · {{ story.published_at|timesince }} ago
